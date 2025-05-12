@@ -1,0 +1,223 @@
+=== Processing Volume Level ===
+Vocab size for volume: 9980
+Training Multi-Class Logistic Regression (Custom)...
+Finalizing Model:   0%|                                                     | 0/100 [00:00<?, ?it/s]Training classifier for class 0 (1/47)
+Training classifier for class 1 (2/47)
+Training classifier for class 2 (3/47)
+Training classifier for class 3 (4/47)
+Training classifier for class 4 (5/47)
+Training classifier for class 5 (6/47)
+Training classifier for class 6 (7/47)
+Training classifier for class 7 (8/47)
+Training classifier for class 8 (9/47)
+Training classifier for class 9 (10/47)
+Training classifier for class 10 (11/47)
+Training classifier for class 11 (12/47)
+Training classifier for class 12 (13/47)
+Training classifier for class 13 (14/47)
+Training classifier for class 14 (15/47)
+Training classifier for class 15 (16/47)
+Training classifier for class 16 (17/47)
+Training classifier for class 17 (18/47)
+Training classifier for class 18 (19/47)
+Training classifier for class 19 (20/47)
+Training classifier for class 20 (21/47)
+Training classifier for class 21 (22/47)
+Training classifier for class 22 (23/47)
+Training classifier for class 23 (24/47)
+Training classifier for class 24 (25/47)
+Training classifier for class 25 (26/47)
+Training classifier for class 26 (27/47)
+Training classifier for class 27 (28/47)
+Training classifier for class 28 (29/47)
+Training classifier for class 29 (30/47)
+Training classifier for class 30 (31/47)
+Training classifier for class 31 (32/47)
+Training classifier for class 32 (33/47)
+Training classifier for class 33 (34/47)
+Training classifier for class 34 (35/47)
+Training classifier for class 35 (36/47)
+Training classifier for class 36 (37/47)
+Training classifier for class 37 (38/47)
+Training classifier for class 38 (39/47)
+Training classifier for class 39 (40/47)
+Training classifier for class 40 (41/47)
+Training classifier for class 41 (42/47)
+Training classifier for class 42 (43/47)
+Training classifier for class 43 (44/47)
+Training classifier for class 44 (45/47)
+Training classifier for class 45 (46/47)
+Training classifier for class 46 (47/47)
+Finalizing Model: 100%|███████████████████████████████████████████| 100/100 [00:21<00:00,  4.74it/s]
+
+==== Final metrics table for CUSTOM Multi-Class Logistic Regression ====
+
+==== Metrics for Multi-Class Logistic Regression on TRAINING data ====
+Accuracy = 0.1049
+Model Evaluation Metrics (TRAINING data):
++--------------------------------------------------+
+| Category     | Precision    | Recall       | F1-Score     |
+| Class 0      | 0            | 0.0          | 0            |
+| Class 1      | 0            | 0.0          | 0            |
+| Class 2      | 0            | 0.0          | 0            |
+| Class 3      | 0            | 0.0          | 0            |
+| Class 4      | 0            | 0.0          | 0            |
+| Class 5      | 0.6167       | 0.0215       | 0.0416       |
+| Class 6      | 0.4083       | 0.1149       | 0.1793       |
+| Class 7      | 0.0          | 0.0          | 0            |
+| Class 8      | 0.3333       | 0.0016       | 0.0032       |
+| Class 9      | 0.1312       | 0.7208       | 0.2221       |
+| Class 10     | 0            | 0.0          | 0            |
+| Class 11     | 0            | 0.0          | 0            |
+| Class 12     | 0            | 0.0          | 0            |
+| Class 13     | 0            | 0.0          | 0            |
+| Class 14     | 0            | 0.0          | 0            |
+| Class 15     | 0            | 0.0          | 0            |
+| Class 16     | 0            | 0.0          | 0            |
+| Class 17     | 0            | 0.0          | 0            |
+| Class 18     | 0            | 0.0          | 0            |
+| Class 19     | 0            | 0.0          | 0            |
+| Class 20     | 0            | 0.0          | 0            |
+| Class 21     | 0.1053       | 0.0038       | 0.0074       |
+| Class 22     | 0            | 0.0          | 0            |
+| Class 23     | 0            | 0.0          | 0            |
+| Class 24     | 0.0748       | 0.8609       | 0.1377       |
+| Class 25     | 0            | 0.0          | 0            |
+| Class 26     | 0            | 0.0          | 0            |
+| Class 27     | 0            | 0.0          | 0            |
+| Class 28     | 0            | 0.0          | 0            |
+| Class 29     | 0            | 0.0          | 0            |
+| Class 30     | 0            | 0.0          | 0            |
+| Class 31     | 0            | 0.0          | 0            |
+| Class 32     | 0            | 0.0          | 0            |
+| Class 33     | 0            | 0.0          | 0            |
+| Class 34     | 0            | 0.0          | 0            |
+| Class 35     | 0            | 0.0          | 0            |
+| Class 36     | 0            | 0.0          | 0            |
+| Class 37     | 0            | 0.0          | 0            |
+| Class 38     | 0            | 0.0          | 0            |
+| Class 39     | 0            | 0.0          | 0            |
+| Class 40     | 0.203        | 0.1678       | 0.1837       |
+| Class 41     | 0            | 0.0          | 0            |
+| Class 42     | 0            | 0.0          | 0            |
+| Class 43     | 0            | 0.0          | 0            |
+| Class 44     | 0            | 0.0          | 0            |
+| Class 45     | 0            | 0.0          | 0            |
+| Class 46     | 0            | 0.0          | 0            |
+| Micro-Average | 0.1049       | 0.1049       | 0.1049       |
+| Macro-Average | 0.0398       | 0.0402       | 0.0165       |
++--------------------------------------------------+
+
+
+==== Metrics for Multi-Class Logistic Regression on VALIDATION data ====
+Accuracy = 0.1067
+Model Evaluation Metrics (VALIDATION data):
++--------------------------------------------------+
+| Category     | Precision    | Recall       | F1-Score     |
+| Class 0      | 0            | 0.0          | 0            |
+| Class 1      | 0            | 0.0          | 0            |
+| Class 2      | 0            | 0.0          | 0            |
+| Class 3      | 0            | 0.0          | 0            |
+| Class 4      | 0            | 0.0          | 0            |
+| Class 5      | 0.75         | 0.021        | 0.0408       |
+| Class 6      | 0.4583       | 0.1162       | 0.1854       |
+| Class 7      | 0            | 0.0          | 0            |
+| Class 8      | 0.0          | 0.0          | 0            |
+| Class 9      | 0.1355       | 0.7335       | 0.2287       |
+| Class 10     | 0            | 0.0          | 0            |
+| Class 11     | 0            | 0.0          | 0            |
+| Class 12     | 0            | 0.0          | 0            |
+| Class 13     | 0            | 0.0          | 0            |
+| Class 14     | 0            | 0.0          | 0            |
+| Class 15     | 0            | 0.0          | 0            |
+| Class 16     | 0            | 0.0          | 0            |
+| Class 17     | 0            | 0.0          | 0            |
+| Class 18     | 0            | 0.0          | 0            |
+| Class 19     | 0            | 0.0          | 0            |
+| Class 20     | 0            | 0.0          | 0            |
+| Class 21     | 0.2667       | 0.0115       | 0.022        |
+| Class 22     | 0            | 0.0          | 0            |
+| Class 23     | 0            | 0.0          | 0            |
+| Class 24     | 0.0756       | 0.8788       | 0.1393       |
+| Class 25     | 0            | 0.0          | 0            |
+| Class 26     | 0            | 0.0          | 0            |
+| Class 27     | 0            | 0.0          | 0            |
+| Class 28     | 0            | 0.0          | 0            |
+| Class 29     | 0.0          | 0.0          | 0            |
+| Class 30     | 0            | 0.0          | 0            |
+| Class 31     | 0            | 0.0          | 0            |
+| Class 32     | 0            | 0.0          | 0            |
+| Class 33     | 0            | 0.0          | 0            |
+| Class 34     | 0            | 0.0          | 0            |
+| Class 35     | 0            | 0.0          | 0            |
+| Class 36     | 0            | 0.0          | 0            |
+| Class 37     | 0            | 0.0          | 0            |
+| Class 38     | 0            | 0.0          | 0            |
+| Class 39     | 0            | 0.0          | 0            |
+| Class 40     | 0.1846       | 0.1622       | 0.1727       |
+| Class 41     | 0            | 0.0          | 0            |
+| Class 42     | 0            | 0.0          | 0            |
+| Class 43     | 0            | 0.0          | 0            |
+| Class 44     | 0            | 0.0          | 0            |
+| Class 45     | 0            | 0.0          | 0            |
+| Class 46     | 0            | 0.0          | 0            |
+| Micro-Average | 0.1067       | 0.1067       | 0.1067       |
+| Macro-Average | 0.0398       | 0.0409       | 0.0168       |
++--------------------------------------------------+
+
+
+==== Metrics for Multi-Class Logistic Regression on TEST data ====
+Accuracy = 0.1048
+Model Evaluation Metrics (TEST data):
++--------------------------------------------------+
+| Category     | Precision    | Recall       | F1-Score     |
+| Class 0      | 0            | 0.0          | 0            |
+| Class 1      | 0            | 0.0          | 0            |
+| Class 2      | 0            | 0.0          | 0            |
+| Class 3      | 0            | 0.0          | 0            |
+| Class 4      | 0            | 0.0          | 0            |
+| Class 5      | 0.5          | 0.014        | 0.0272       |
+| Class 6      | 0.4795       | 0.1232       | 0.1961       |
+| Class 7      | 0.0          | 0.0          | 0            |
+| Class 8      | 0.0          | 0.0          | 0            |
+| Class 9      | 0.1328       | 0.7196       | 0.2243       |
+| Class 10     | 0            | 0.0          | 0            |
+| Class 11     | 0            | 0.0          | 0            |
+| Class 12     | 0            | 0.0          | 0            |
+| Class 13     | 0            | 0.0          | 0            |
+| Class 14     | 0            | 0.0          | 0            |
+| Class 15     | 0            | 0.0          | 0            |
+| Class 16     | 0            | 0.0          | 0            |
+| Class 17     | 0            | 0.0          | 0            |
+| Class 18     | 0            | 0.0          | 0            |
+| Class 19     | 0            | 0.0          | 0            |
+| Class 20     | 0            | 0.0          | 0            |
+| Class 21     | 0.1538       | 0.0058       | 0.0111       |
+| Class 22     | 0            | 0.0          | 0            |
+| Class 23     | 0            | 0.0          | 0            |
+| Class 24     | 0.0745       | 0.8701       | 0.1373       |
+| Class 25     | 0            | 0.0          | 0            |
+| Class 26     | 0            | 0.0          | 0            |
+| Class 27     | 0            | 0.0          | 0            |
+| Class 28     | 0            | 0.0          | 0            |
+| Class 29     | 0.0          | 0.0          | 0            |
+| Class 30     | 0            | 0.0          | 0            |
+| Class 31     | 0            | 0.0          | 0            |
+| Class 32     | 0            | 0.0          | 0            |
+| Class 33     | 0            | 0.0          | 0            |
+| Class 34     | 0            | 0.0          | 0            |
+| Class 35     | 0            | 0.0          | 0            |
+| Class 36     | 0            | 0.0          | 0            |
+| Class 37     | 0            | 0.0          | 0            |
+| Class 38     | 0            | 0.0          | 0            |
+| Class 39     | 0            | 0.0          | 0            |
+| Class 40     | 0.2043       | 0.1588       | 0.1787       |
+| Class 41     | 0            | 0.0          | 0            |
+| Class 42     | 0            | 0.0          | 0            |
+| Class 43     | 0            | 0.0          | 0            |
+| Class 44     | 0            | 0.0          | 0            |
+| Class 45     | 0            | 0.0          | 0            |
+| Class 46     | 0            | 0.0          | 0            |
+| Micro-Average | 0.1048       | 0.1048       | 0.1048       |
+| Macro-Average | 0.0329       | 0.0402       | 0.0165       |
++--------------------------------------------------+

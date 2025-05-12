@@ -33,7 +33,7 @@ for level in levels:
     )
 
     # Initialize and train the model
-    logRegr = MultiClassLogisticRegression(lr=0.01, n_iter=1000, tolerance=1e-6, alpha=0.01)
+    logRegr = MultiClassLogisticRegression(lr=0.01, n_iter=300, tolerance=1e-6, alpha=0.01)
     y_pred_train, y_pred_val, y_pred_test, custom_iteration_data = utils.runMyLogisticRegression(
         logRegr,
         binary_vectors_train, y_train_raw,

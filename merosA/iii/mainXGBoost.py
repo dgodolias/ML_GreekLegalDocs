@@ -35,7 +35,7 @@ for level in levels:
 
     xgboost_model = MultiClassXGBoost(
         n_classes=n_classes,
-        n_estimators=10,
+        n_estimators=3,
         learning_rate=0.1,
         max_depth=3,
         reg_lambda=1.0,
