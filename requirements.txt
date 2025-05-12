@@ -7,3 +7,4 @@ matplotlib
 gensim
 keras
 xgboost
+tqdm
