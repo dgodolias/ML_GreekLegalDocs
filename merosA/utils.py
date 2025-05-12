@@ -120,13 +120,22 @@ def compute_and_print_metrics(y_true, y_pred, dataset_description="Data", model_
     """Compute and print accuracy and detailed metrics for multi-class classification."""
     acc = compute_accuracy(y_true, y_pred)
     matrix = compute_metrics_matrix(y_true, y_pred)
-    print(f"\n==== Metrics for {model_name} on {dataset_description} ====")
+    
+    # Extract the micro and macro averages (last two rows of the matrix)
+    micro_avg = matrix[-2]
+    macro_avg = matrix[-1]
+    
+    print(f"\n==== Summary Metrics for {model_name} on {dataset_description} ====")
     print(f"Accuracy = {acc:.4f}")
-    print(f"Model Evaluation Metrics ({dataset_description}):")
-    print("+" + "-" * 50 + "+")
-    for row in matrix:
-        print("| {:<12} | {:<12} | {:<12} | {:<12} |".format(*row))
-    print("+" + "-" * 50 + "+\n")
+    print(f"Micro-Precision = {micro_avg[1]}, Micro-Recall = {micro_avg[2]}, Micro-F1 = {micro_avg[3]}")
+    print(f"Macro-Precision = {macro_avg[1]}, Macro-Recall = {macro_avg[2]}, Macro-F1 = {macro_avg[3]}")
+    
+    # Uncomment the following if you want to see the detailed metrics
+    # print(f"Model Evaluation Metrics ({dataset_description}):")
+    # print("+" + "-" * 50 + "+")
+    # for row in matrix:
+    #     print("| {:<12} | {:<12} | {:<12} | {:<12} |".format(*row))
+    # print("+" + "-" * 50 + "+\n")
 
 # Other functions (runMyAdaBoost, runMyXGBoost, etc.) remain unused for this task but kept for compatibility
 def runMyAdaBoost(adaboost, X_train, y_train_transformed, X_val, y_val_transformed, X_test, y_test_transformed):

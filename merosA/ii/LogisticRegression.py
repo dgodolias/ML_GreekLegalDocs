@@ -1,7 +1,11 @@
 import numpy as np
 
 def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    """Safe implementation of the sigmoid function to avoid numerical overflow."""
+    # Use a threshold to prevent overflow
+    clip_value = 700  # Large negative values will be clipped
+    x_safe = np.clip(x, -clip_value, clip_value)
+    return 1 / (1 + np.exp(-x_safe))
 
 class LogisticRegression:
     def __init__(self, lr=0.01, n_iter=1000, tolerance=1e-6, alpha=0.01, use_stochastic=False):
