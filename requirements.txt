@@ -1,0 +1,9 @@
+numpy
+torch
+torchvision
+torchaudio
+scikit-learn
+matplotlib
+gensim
+keras
+xgboost
