@@ -50,6 +50,29 @@ class SVM:
         X_np = np.array(X) # Renamed to avoid conflict later if X was a list
         y_flat = np.array(y).flatten()
         
+        # Check for classes with only one sample and remove them
+        remove_rare_classes = False
+        rare_classes = []
+        if len(y_flat) > 0:
+            class_counts = Counter(y_flat)
+            if class_counts:
+                min_samples_in_class = min(class_counts.values())
+                if min_samples_in_class == 1:
+                    remove_rare_classes = True
+                    rare_classes = [cls for cls, count in class_counts.items() if count == 1]
+                    print(f"Warning: Removing {len(rare_classes)} classes with only one sample to ensure model can be trained.")
+                    
+                    # Create masks for filtering out rare classes
+                    keep_mask = np.ones(len(y_flat), dtype=bool)
+                    for cls in rare_classes:
+                        keep_mask = keep_mask & (y_flat != cls)
+                    
+                    # Filter the data
+                    X_np = X_np[keep_mask]
+                    y_flat = y_flat[keep_mask]
+                    
+                    print(f"After removal: {len(np.unique(y_flat))} classes remain with {len(y_flat)} total samples.")
+                
         # Determine cv for CalibratedClassifierCV
         cv_to_use = 5  # Default for CalibratedClassifierCV
         if len(y_flat) > 0: # Proceed only if y is not empty
@@ -63,12 +86,11 @@ class SVM:
                     if min_samples_in_class >= 2:
                         cv_to_use = min_samples_in_class
                         print(f"Info: SVM class adjusting CalibratedClassifierCV cv from 5 to {cv_to_use} (minimum class count is {min_samples_in_class}).")
-                    else: # min_samples_in_class is 1 (or 0)
+                    else: # This should no longer happen if removal was successful
                         print(f"Warning: SVM class - Minimum class count is {min_samples_in_class}. "
                               f"CalibratedClassifierCV with default cv={cv_to_use} will likely fail. "
                               f"K-fold CV requires at least 2 samples per class for stratification. "
                               f"Consider alternative calibration methods or data preprocessing for classes with very few samples.")
-                        # cv_to_use remains 5; the original error will likely occur, highlighting the data issue.
         
         # Apply TF-IDF transformation if specified
         X_transformed = self._transform_features(X_np) # Use X_np

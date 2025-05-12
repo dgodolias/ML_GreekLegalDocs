@@ -4,12 +4,11 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 class LogisticRegression:
-    def __init__(self, lr=0.01, n_iter=1000, tolerance=1e-6, alpha=0.01, use_stochastic=False):
+    def __init__(self, lr=0.01, n_iter=1000, tolerance=1e-6, alpha=0.01):
         self.lr = lr
         self.n_iter = n_iter
         self.tolerance = tolerance
         self.alpha = alpha
-        self.use_stochastic = use_stochastic
         self.weights = None
         self.bias = None
         self.iteration_data = []
@@ -24,39 +23,43 @@ class LogisticRegression:
         self.weights = np.zeros(n_features)
         self.bias = 0
 
-        if self.use_stochastic:
-            # For stochastic training, maintain a moving average of gradient norms for convergence
-            grad_norm_window = []
-            window_size = 100  # Number of iterations to average for convergence check
+        # Always use mini-batch training
+        for i in range(self.n_iter):
+            dw_sum = 0
+            db_sum = 0
 
-            for i in range(self.n_iter):
-                # Randomly select a single example
-                idx = np.random.randint(0, n_samples)
-                X_sample = X[idx:idx+1]
-                y_sample = y[idx:idx+1]
+            for start in range(0, n_samples, batch_size):
+                end = start + batch_size
+                X_batch = X[start:end]
+                y_batch = y[start:end]
 
-                # Compute prediction and gradients
-                linear_pred = np.dot(X_sample, self.weights) + self.bias
-                prediction = sigmoid(linear_pred)
+                linear_pred = np.dot(X_batch, self.weights) + self.bias
+                predictions = sigmoid(linear_pred)
 
-                dw = np.dot(X_sample.T, (prediction - y_sample))
-                db = np.sum(prediction - y_sample)
+                dw = (1 / len(X_batch)) * np.dot(X_batch.T, (predictions - y_batch))
+                db = (1 / len(X_batch)) * np.sum(predictions - y_batch)
+                dw += (self.alpha / n_samples) * np.sign(self.weights)
 
-                # Add L1 regularization term
-                dw += self.alpha * np.sign(self.weights)
-
-                # Update weights and bias
                 self.weights -= self.lr * dw
                 self.bias -= self.lr * db
 
-                # Track gradient norm for convergence
-                grad_norm = np.linalg.norm(dw) + abs(db)
-                grad_norm_window.append(grad_norm)
-                if len(grad_norm_window) > window_size:
-                    grad_norm_window.pop(0)
+                dw_sum += np.linalg.norm(dw)
+                db_sum += abs(db)
 
-                # Store metrics every 100 iterations (but don't print)
-                if (i + 1) % 100 == 0:
+            if (i + 1) % 100 == 0:
+                train_acc, train_matrix = self._print_iteration_metrics(X, y, print_output=False)
+                val_acc, val_matrix = self._print_iteration_metrics(X_val, y_val, print_output=False)
+                self.iteration_data.append({
+                    "iteration": (i + 1),
+                    "train_accuracy": train_acc,
+                    "train_matrix": train_matrix,
+                    "val_accuracy": val_acc,
+                    "val_matrix": val_matrix
+                })
+
+            if dw_sum < self.tolerance and db_sum < self.tolerance:
+                # Store final metrics before breaking if convergence is met early
+                if not self.iteration_data or self.iteration_data[-1]["iteration"] != (i + 1):
                     train_acc, train_matrix = self._print_iteration_metrics(X, y, print_output=False)
                     val_acc, val_matrix = self._print_iteration_metrics(X_val, y_val, print_output=False)
                     self.iteration_data.append({
@@ -66,66 +69,21 @@ class LogisticRegression:
                         "val_accuracy": val_acc,
                         "val_matrix": val_matrix
                     })
-
-                # Check for convergence based on average gradient norm
-                if len(grad_norm_window) == window_size and np.mean(grad_norm_window) < self.tolerance:
-                    train_acc, train_matrix = self._print_iteration_metrics(X, y, print_output=False)
-                    val_acc, val_matrix = self._print_iteration_metrics(X_val, y_val, print_output=False)
-                    self.iteration_data.append({
-                        "iteration": (i + 1),
-                        "train_accuracy": train_acc,
-                        "train_matrix": train_matrix,
-                        "val_accuracy": val_acc,
-                        "val_matrix": val_matrix
-                    })
-                    break
-
-        else:
-            # Original mini-batch training
-            for i in range(self.n_iter):
-                dw_sum = 0
-                db_sum = 0
-
-                for start in range(0, n_samples, batch_size):
-                    end = start + batch_size
-                    X_batch = X[start:end]
-                    y_batch = y[start:end]
-
-                    linear_pred = np.dot(X_batch, self.weights) + self.bias
-                    predictions = sigmoid(linear_pred)
-
-                    dw = (1 / len(X_batch)) * np.dot(X_batch.T, (predictions - y_batch))
-                    db = (1 / len(X_batch)) * np.sum(predictions - y_batch)
-                    dw += (self.alpha / n_samples) * np.sign(self.weights)
-
-                    self.weights -= self.lr * dw
-                    self.bias -= self.lr * db
-
-                    dw_sum += np.linalg.norm(dw)
-                    db_sum += abs(db)
-
-                if (i + 1) % 100 == 0:
-                    train_acc, train_matrix = self._print_iteration_metrics(X, y, print_output=False)
-                    val_acc, val_matrix = self._print_iteration_metrics(X_val, y_val, print_output=False)
-                    self.iteration_data.append({
-                        "iteration": (i + 1),
-                        "train_accuracy": train_acc,
-                        "train_matrix": train_matrix,
-                        "val_accuracy": val_acc,
-                        "val_matrix": val_matrix
-                    })
-
-                if dw_sum < self.tolerance and db_sum < self.tolerance:
-                    train_acc, train_matrix = self._print_iteration_metrics(X, y, print_output=False)
-                    val_acc, val_matrix = self._print_iteration_metrics(X_val, y_val, print_output=False)
-                    self.iteration_data.append({
-                        "iteration": (i + 1),
-                        "train_accuracy": train_acc,
-                        "train_matrix": train_matrix,
-                        "val_accuracy": val_acc,
-                        "val_matrix": val_matrix
-                    })
-                    break
+                break
+        # Ensure metrics for the last iteration are recorded if loop finishes without early break
+        if not self.iteration_data or self.iteration_data[-1]["iteration"] != self.n_iter:
+            # Check if the last iteration was already added by convergence break
+            already_added = any(d["iteration"] == self.n_iter for d in self.iteration_data)
+            if not already_added:
+                train_acc, train_matrix = self._print_iteration_metrics(X, y, print_output=False)
+                val_acc, val_matrix = self._print_iteration_metrics(X_val, y_val, print_output=False)
+                self.iteration_data.append({
+                    "iteration": self.n_iter, # Log as n_iter if loop completes
+                    "train_accuracy": train_acc,
+                    "train_matrix": train_matrix,
+                    "val_accuracy": val_acc,
+                    "val_matrix": val_matrix
+                })
 
         return self.iteration_data
 
@@ -198,15 +156,11 @@ class MultiClassLogisticRegression:
 
     def fit(self, X, y, X_val, y_val, batch_size=256):
         unique_classes = np.unique(y)
-        n_classes = len(unique_classes)
-        # Use stochastic training if more than 2 classes
-        use_stochastic = n_classes > 2
         self.classifiers = [LogisticRegression(
             lr=self.lr,
             n_iter=self.n_iter,
             tolerance=self.tolerance,
-            alpha=self.alpha,
-            use_stochastic=use_stochastic
+            alpha=self.alpha
         ) for _ in unique_classes]
 
         for i, cls in enumerate(unique_classes):
