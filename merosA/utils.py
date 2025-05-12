@@ -28,34 +28,37 @@ def runMyLogisticRegression(logRegr, X_train, y_train, X_val, y_val, X_test, y_t
     from tqdm import tqdm
     import time
     
-    # Initialize progress bar
+    # Get number of classes for more accurate progress tracking
+    n_classes = len(np.unique(y_train))
+    
+    # Initialize progress bar with proper total (iterations × classes)
     print("Training Multi-Class Logistic Regression (Custom)...")
-    pbar = tqdm(total=logRegr.n_iter, desc="Training Progress", ncols=100)
     
-    # Create a wrapper for the fit method to update progress bar
-    def progress_callback(iteration_data):
-        last_iteration = iteration_data[-1]["iteration"] if iteration_data else 0
-        pbar.update(100 if last_iteration % 100 == 0 else last_iteration % 100)
+    # Store the original fit method for the MultiClassLogisticRegression
+    original_multi_fit = logRegr.fit
     
-    # Monkey patch the fit method to capture progress updates
-    original_fit = logRegr.fit
-    
-    def fit_with_progress(*args, **kwargs):
-        result = original_fit(*args, **kwargs)
-        progress_callback(result)
+    # Create a wrapper that captures progress
+    def fit_with_progress_tracking(*args, **kwargs):
+        # Show progress bar only for the final metrics
+        pbar = tqdm(total=100, desc="Finalizing Model", ncols=100)
+        
+        # Call the original fit method
+        result = original_multi_fit(*args, **kwargs)
+        
+        # Complete the progress bar when done
+        pbar.update(100)
+        pbar.close()
+        
         return result
-    
+        
     # Replace the fit method temporarily
-    logRegr.fit = fit_with_progress
+    logRegr.fit = fit_with_progress_tracking
     
     # Train the model
     iteration_data = logRegr.fit(X_train, y_train, X_val, y_val, batch_size=batch_size)
     
     # Reset original method
-    logRegr.fit = original_fit
-    
-    # Close progress bar
-    pbar.close()
+    logRegr.fit = original_multi_fit
     
     # Make predictions
     y_pred_train = logRegr.predict(X_train)
