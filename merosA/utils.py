@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import AdaBoostClassifier
 import xgboost as xgb
+import os # Added for path operations
 
 def preprocess_data(processor, x_train, y_train, x_val, y_val, x_test, y_test):
     """Preprocess GLC data by converting to binary vectors and selecting top features."""
@@ -23,7 +24,7 @@ def preprocess_data(processor, x_train, y_train, x_val, y_val, x_test, y_test):
 
     return binary_vectors_train, y_train, binary_vectors_val, y_val, binary_vectors_test, y_test
 
-def runMyLogisticRegression(logRegr, X_train, y_train, X_val, y_val, X_test, y_test, batch_size=256):
+def runMyLogisticRegression(logRegr, X_train, y_train, X_val, y_val, X_test, y_test, batch_size=256, output_file_prefix=None):
     """Train and evaluate the custom multi-class Logistic Regression."""
     from tqdm import tqdm
     import time
@@ -65,11 +66,15 @@ def runMyLogisticRegression(logRegr, X_train, y_train, X_val, y_val, X_test, y_t
     y_pred_val = logRegr.predict(X_val)
     y_pred_test = logRegr.predict(X_test)
 
-    # Display only the final metrics table
+    # Display and save metrics
     print("\n==== Final metrics table for CUSTOM Multi-Class Logistic Regression ====")
-    compute_and_print_metrics(y_train, y_pred_train, "TRAINING data", "Multi-Class Logistic Regression")
-    compute_and_print_metrics(y_val, y_pred_val, "VALIDATION data", "Multi-Class Logistic Regression")
-    compute_and_print_metrics(y_test, y_pred_test, "TEST data", "Multi-Class Logistic Regression")
+    train_save_path = f"{output_file_prefix}_train.txt" if output_file_prefix else None
+    val_save_path = f"{output_file_prefix}_val.txt" if output_file_prefix else None
+    test_save_path = f"{output_file_prefix}_test.txt" if output_file_prefix else None
+
+    compute_and_print_metrics(y_train, y_pred_train, "TRAINING data", "Multi-Class Logistic Regression", save_path=train_save_path)
+    compute_and_print_metrics(y_val, y_pred_val, "VALIDATION data", "Multi-Class Logistic Regression", save_path=val_save_path)
+    compute_and_print_metrics(y_test, y_pred_test, "TEST data", "Multi-Class Logistic Regression", save_path=test_save_path)
 
     return y_pred_train, y_pred_val, y_pred_test, iteration_data
 
@@ -116,8 +121,8 @@ def compute_metrics_matrix(y_true, y_pred):
 
     return np.array(metrics)
 
-def compute_and_print_metrics(y_true, y_pred, dataset_description="Data", model_name="Model"):
-    """Compute and print accuracy and detailed metrics for multi-class classification."""
+def compute_and_print_metrics(y_true, y_pred, dataset_description="Data", model_name="Model", save_path=None):
+    """Compute and print accuracy and detailed metrics for multi-class classification. Optionally saves metrics to a file."""
     acc = compute_accuracy(y_true, y_pred)
     matrix = compute_metrics_matrix(y_true, y_pred)
     
@@ -125,17 +130,37 @@ def compute_and_print_metrics(y_true, y_pred, dataset_description="Data", model_
     micro_avg = matrix[-2]
     macro_avg = matrix[-1]
     
-    print(f"\n==== Summary Metrics for {model_name} on {dataset_description} ====")
-    print(f"Accuracy = {acc:.4f}")
-    print(f"Micro-Precision = {micro_avg[1]}, Micro-Recall = {micro_avg[2]}, Micro-F1 = {micro_avg[3]}")
-    print(f"Macro-Precision = {macro_avg[1]}, Macro-Recall = {macro_avg[2]}, Macro-F1 = {macro_avg[3]}")
+    output_lines = []
+    output_lines.append(f"==== Summary Metrics for {model_name} on {dataset_description} ====")
+    output_lines.append(f"Accuracy = {acc:.4f}")
+    # Format micro and macro averages to 4 decimal places
+    output_lines.append(f"Micro-Precision = {float(micro_avg[1]):.4f}, Micro-Recall = {float(micro_avg[2]):.4f}, Micro-F1 = {float(micro_avg[3]):.4f}")
+    output_lines.append(f"Macro-Precision = {float(macro_avg[1]):.4f}, Macro-Recall = {float(macro_avg[2]):.4f}, Macro-F1 = {float(macro_avg[3]):.4f}")
     
-    # Uncomment the following if you want to see the detailed metrics
-    # print(f"Model Evaluation Metrics ({dataset_description}):")
-    # print("+" + "-" * 50 + "+")
-    # for row in matrix:
-    #     print("| {:<12} | {:<12} | {:<12} | {:<12} |".format(*row))
-    # print("+" + "-" * 50 + "+\n")
+    # Detailed metrics (optional to print, but good to save)
+    output_lines.append(f"\nModel Evaluation Metrics ({dataset_description}):")
+    output_lines.append("+" + "-" * 50 + "+")
+    for row_idx, row_content in enumerate(matrix):
+        if row_idx == 0:  # Header row
+            output_lines.append("| {:<12} | {:<12} | {:<12} | {:<12} |".format(*row_content))
+        else:  # Metric rows: format numeric values to .4f
+            output_lines.append("| {:<12} | {:<12.4f} | {:<12.4f} | {:<12.4f} |".format(
+                str(row_content[0]), float(row_content[1]), float(row_content[2]), float(row_content[3])
+            ))
+    output_lines.append("+" + "-" * 50 + "+\n")
+
+    # Print to console
+    print("\n".join(output_lines[:4])) # Print summary to console
+
+    if save_path:
+        try:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            with open(save_path, 'w') as f:
+                f.write("\n".join(output_lines))
+            print(f"Metrics saved to {save_path}")
+        except Exception as e:
+            print(f"Error saving metrics to {save_path}: {e}")
 
 # Other functions (runMyAdaBoost, runMyXGBoost, etc.) remain unused for this task but kept for compatibility
 def runMyAdaBoost(adaboost, X_train, y_train_transformed, X_val, y_val_transformed, X_test, y_test_transformed):

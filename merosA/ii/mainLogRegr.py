@@ -18,6 +18,11 @@ models = {}
 for level in levels:
     print(f"\n=== Processing {level.capitalize()} Level ===")
     
+    # Define output path for metrics
+    output_dir = os.path.join(os.path.dirname(__file__), 'outputs')
+    os.makedirs(output_dir, exist_ok=True)
+    output_file_prefix = os.path.join(output_dir, f"{level}_logregr")
+
     # Initialize processor for the current level
     processor = MatrixProcessing(level=level, top_words=10000, skip_top_words=30, skip_least_frequent=20)
     x_train, y_train, x_val, y_val, x_test, y_test = processor.load_data()
@@ -39,7 +44,8 @@ for level in levels:
         binary_vectors_train, y_train_raw,
         binary_vectors_val, y_val_raw,
         binary_vectors_test, y_test_raw,
-        batch_size=256
+        batch_size=256,
+        output_file_prefix=output_file_prefix  # Pass the prefix
     )
     models[level] = logRegr
 

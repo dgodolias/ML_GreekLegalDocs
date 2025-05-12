@@ -2,9 +2,15 @@ import numpy as np
 from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+from collections import Counter
+
+#ignore the convergence warning
+warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn.svm._base")
 
 class SVM:
-    def __init__(self, C=1.0, max_iter=10000, dual=True, use_tfidf=True, fit_intercept=True, class_weight=None):
+    def __init__(self, C=1.0, max_iter=1000, dual=True, use_tfidf=True, fit_intercept=True, class_weight=None):
         """Initialize SVM classifier for text classification.
         
         Args:
@@ -41,19 +47,42 @@ class SVM:
             X_val (ndarray): Validation data feature vectors.
             y_val (ndarray): Validation data labels.
         """
-        X = np.array(X)
-        y = np.array(y).flatten()
+        X_np = np.array(X) # Renamed to avoid conflict later if X was a list
+        y_flat = np.array(y).flatten()
+        
+        # Determine cv for CalibratedClassifierCV
+        cv_to_use = 5  # Default for CalibratedClassifierCV
+        if len(y_flat) > 0: # Proceed only if y is not empty
+            class_counts = Counter(y_flat)
+            if class_counts: # Ensure class_counts is not empty
+                min_samples_in_class = min(class_counts.values())
+                
+                # Adjust cv if the smallest class has fewer samples than the default cv,
+                # but only if the smallest class has at least 2 samples (required for k-fold CV).
+                if 0 < min_samples_in_class < cv_to_use:
+                    if min_samples_in_class >= 2:
+                        cv_to_use = min_samples_in_class
+                        print(f"Info: SVM class adjusting CalibratedClassifierCV cv from 5 to {cv_to_use} (minimum class count is {min_samples_in_class}).")
+                    else: # min_samples_in_class is 1 (or 0)
+                        print(f"Warning: SVM class - Minimum class count is {min_samples_in_class}. "
+                              f"CalibratedClassifierCV with default cv={cv_to_use} will likely fail. "
+                              f"K-fold CV requires at least 2 samples per class for stratification. "
+                              f"Consider alternative calibration methods or data preprocessing for classes with very few samples.")
+                        # cv_to_use remains 5; the original error will likely occur, highlighting the data issue.
         
         # Apply TF-IDF transformation if specified
-        X_transformed = self._transform_features(X)
-        X_val_transformed = self._transform_features(X_val)
+        X_transformed = self._transform_features(X_np) # Use X_np
+        X_val_transformed = self._transform_features(np.array(X_val)) # Ensure X_val is also array for _transform_features
         
         # Fit a calibrated model for probability estimates
-        self.calibrated_model = CalibratedClassifierCV(self.model, cv=5)
-        self.calibrated_model.fit(X_transformed, y)
+        # Suppress ConvergenceWarning for LinearSVC during calibration
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn.svm._base")
+            self.calibrated_model = CalibratedClassifierCV(self.model, cv=cv_to_use)
+            self.calibrated_model.fit(X_transformed, y_flat)
         
         # Compute metrics after training
-        train_acc, train_matrix = self._compute_metrics(X_transformed, y, print_output=False)
+        train_acc, train_matrix = self._compute_metrics(X_transformed, y_flat, print_output=False)
         val_acc, val_matrix = self._compute_metrics(X_val_transformed, y_val, print_output=False)
         
         self.iteration_data.append({

@@ -18,6 +18,11 @@ models = {}
 
 for level in levels:
     print(f"\n=== Processing {level.capitalize()} Level ===")
+
+    # Define output path for metrics
+    output_dir = os.path.join(os.path.dirname(__file__), 'outputs')
+    os.makedirs(output_dir, exist_ok=True)
+    output_file_prefix = os.path.join(output_dir, f"{level}_xgboost_scratch")
     
     processor = MatrixProcessing(level=level, top_words=10000, skip_top_words=30, skip_least_frequent=20)
     x_train, y_train, x_val, y_val, x_test, y_test = processor.load_data()
@@ -51,8 +56,12 @@ for level in levels:
     y_pred_test = xgboost_model.predict(binary_vectors_test)
 
     print("\nFinal Metrics for XGBoost (from Scratch):")
-    utils.compute_and_print_metrics(y_train_raw, y_pred_train, "TRAINING data", "XGBoost (Scratch)")
-    utils.compute_and_print_metrics(y_val_raw, y_pred_val, "VALIDATION data", "XGBoost (Scratch)")
-    utils.compute_and_print_metrics(y_test_raw, y_pred_test, "TEST data", "XGBoost (Scratch)")
+    train_save_path = f"{output_file_prefix}_train.txt"
+    val_save_path = f"{output_file_prefix}_val.txt"
+    test_save_path = f"{output_file_prefix}_test.txt"
+
+    utils.compute_and_print_metrics(y_train_raw, y_pred_train, "TRAINING data", "XGBoost (Scratch)", save_path=train_save_path)
+    utils.compute_and_print_metrics(y_val_raw, y_pred_val, "VALIDATION data", "XGBoost (Scratch)", save_path=val_save_path)
+    utils.compute_and_print_metrics(y_test_raw, y_pred_test, "TEST data", "XGBoost (Scratch)", save_path=test_save_path)
 
 print("\nDone with XGBoost (from Scratch)!")
