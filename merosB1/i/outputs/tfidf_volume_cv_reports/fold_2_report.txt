@@ -1,4 +1,4 @@
-Classification Report for Fold 2 (TF-IDF - volume)
+Classification Report for Fold 2 (TF-IDF)
 Accuracy: 0.6559
 
               precision    recall  f1-score   support

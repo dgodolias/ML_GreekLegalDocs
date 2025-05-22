@@ -1,4 +1,4 @@
-Classification Report for Fold 5 (TF-IDF - volume)
+Classification Report for Fold 5 (TF-IDF)
 Accuracy: 0.6249
 
               precision    recall  f1-score   support

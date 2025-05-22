@@ -1,4 +1,4 @@
-Classification Report for Fold 3 (TF-IDF - volume)
+Classification Report for Fold 3 (TF-IDF)
 Accuracy: 0.6240
 
               precision    recall  f1-score   support
