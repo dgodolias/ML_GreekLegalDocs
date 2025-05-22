@@ -7,9 +7,10 @@ from scipy.stats import t
 from datasets import load_dataset
 from sklearn.model_selection import train_test_split as sk_train_test_split, StratifiedKFold
 from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression # Added
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
-from gensim.models import Word2Vec # Added for Word2Vec
+from gensim.models import Word2Vec
+import joblib # For saving/loading sklearn vectorizers
 
 def script_execution_timer(func):
     """Decorator to time the execution of a script/function."""
@@ -48,14 +49,14 @@ def format_mean_report_to_string(mean_report_dict, report_class_labels_str, incl
             report_str += f"{label:<20}"
             if include_ci and 'precision' in metrics and isinstance(metrics['precision'], dict):
                 for metric_name in ['precision', 'recall', 'f1-score']:
-                    if metric_name in metrics and isinstance(metrics[metric_name], dict): # Check if metric data exists and is dict
+                    if metric_name in metrics and isinstance(metrics[metric_name], dict): 
                         mean_val = metrics[metric_name].get('mean', 0)
                         moe_val = metrics[metric_name].get('moe', 0)
                         lower_bound = mean_val - moe_val
                         upper_bound = mean_val + moe_val
                         report_str += f"{mean_val:>8.4f} ± {moe_val:<6.4f} [{lower_bound:>6.4f},{upper_bound:>6.4f}]"
                     else:
-                        report_str += f"{metrics.get(metric_name, 0):>8.4f} ± {'N/A':<6} [{'N/A':>6},{'N/A':>6}]" # Fallback for non-dict or missing
+                        report_str += f"{metrics.get(metric_name, 0):>8.4f} ± {'N/A':<6} [{'N/A':>6},{'N/A':>6}]" 
             else: 
                 report_str += f"{metrics.get('precision', 0):>10.4f}"
                 report_str += f"{metrics.get('recall', 0):>10.4f}"
@@ -70,14 +71,14 @@ def format_mean_report_to_string(mean_report_dict, report_class_labels_str, incl
             report_str += f"{avg_type:<20}"
             if include_ci and 'precision' in metrics and isinstance(metrics['precision'], dict):
                 for metric_name in ['precision', 'recall', 'f1-score']:
-                    if metric_name in metrics and isinstance(metrics[metric_name], dict): # Check if metric data exists and is dict
+                    if metric_name in metrics and isinstance(metrics[metric_name], dict): 
                         mean_val = metrics[metric_name].get('mean', 0)
                         moe_val = metrics[metric_name].get('moe', 0)
                         lower_bound = mean_val - moe_val
                         upper_bound = mean_val + moe_val
                         report_str += f"{mean_val:>8.4f} ± {moe_val:<6.4f} [{lower_bound:>6.4f},{upper_bound:>6.4f}]"
                     else:
-                        report_str += f"{metrics.get(metric_name, 0):>8.4f} ± {'N/A':<6} [{'N/A':>6},{'N/A':>6}]" # Fallback
+                        report_str += f"{metrics.get(metric_name, 0):>8.4f} ± {'N/A':<6} [{'N/A':>6},{'N/A':>6}]" 
             else:
                 report_str += f"{metrics.get('precision', 0):>10.4f}"
                 report_str += f"{metrics.get('recall', 0):>10.4f}"
@@ -86,8 +87,9 @@ def format_mean_report_to_string(mean_report_dict, report_class_labels_str, incl
             report_str += f"{metrics.get('support', {}).get('mean', 0):>15.2f}\n"
     return report_str
 
-def load_and_preprocess_data(dataset_config, use_subset, subset_percentage, random_state=42):
-    """Loads dataset, extracts text/labels, and optionally creates a subset."""
+
+def load_and_preprocess_data(dataset_config, subset_percentage, random_state=42, min_samples_per_class=2):
+    """Loads dataset, extracts text/labels, filters classes with < min_samples_per_class, and optionally creates a subset based on subset_percentage."""
     print(f"Loading dataset 'AI-team-UoA/greek_legal_code' with '{dataset_config}' configuration...")
     start_time = time.time()
     try:
@@ -109,47 +111,83 @@ def load_and_preprocess_data(dataset_config, use_subset, subset_percentage, rand
     if 'text' not in dataset_split.column_names or 'label' not in dataset_split.column_names:
         print(f"Error: 'text' or 'label' column not found. Available: {dataset_split.column_names}"); return None, None, None, None
 
-    texts_full = dataset_split['text']
-    labels_full = np.array(dataset_split['label'])
-    print(f"Full dataset extracted in {time.time() - start_time:.2f}s. Samples: {len(texts_full)}")
+    all_texts = dataset_split['text']
+    all_labels = np.array(dataset_split['label'])
+    print(f"Full dataset extracted in {time.time() - start_time:.2f}s. Samples: {len(all_texts)}")
 
-    if len(texts_full) == 0: print("No data to process."); return None, None, None, None
+    if len(all_texts) == 0: print("No data to process initially."); return None, None, None, None
         
-    unique_labels_full = sorted(list(set(labels_full)))
-    print(f"Unique labels in full dataset ({dataset_config} config): {len(unique_labels_full)}")
+    unique_labels_original, counts_original = np.unique(all_labels, return_counts=True)
+    print(f"Original unique labels in full dataset ({dataset_config} config): {len(unique_labels_original)}")
 
-    texts_to_process, labels_to_process = texts_full, labels_full
-    if use_subset:
-        print(f"\nSelecting a {subset_percentage*100:.0f}% subset...")
+    print(f"Filtering out classes with fewer than {min_samples_per_class} samples...")
+    labels_to_keep = unique_labels_original[counts_original >= min_samples_per_class]
+    
+    if len(labels_to_keep) < len(unique_labels_original):
+        num_filtered_out = len(unique_labels_original) - len(labels_to_keep)
+        print(f"Filtered out {num_filtered_out} classes. Keeping {len(labels_to_keep)} classes.")
+    else:
+        print("No classes needed filtering based on min_samples_per_class.")
+
+    mask = np.isin(all_labels, labels_to_keep)
+    texts_filtered = [text for i, text in enumerate(all_texts) if mask[i]]
+    labels_filtered = all_labels[mask]
+
+    if len(texts_filtered) == 0:
+        print(f"No data remaining after filtering classes with less than {min_samples_per_class} samples. Check your dataset and min_samples_per_class setting.")
+        return None, None, None, None
+    
+    print(f"Dataset size after filtering for min_samples_per_class: {len(texts_filtered)} samples.")
+    
+    unique_labels_after_filtering = sorted(list(set(labels_filtered)))
+    print(f"Unique labels after initial filtering: {len(unique_labels_after_filtering)}")
+
+    texts_to_process = texts_filtered
+    labels_to_process = labels_filtered
+    
+    if 0 < subset_percentage < 1.0:
+        print(f"\nSelecting a {subset_percentage*100:.0f}% subset from the filtered data...")
+        unique_labels_for_subset_stratify, counts_for_subset_stratify = np.unique(labels_filtered, return_counts=True)
+        can_stratify_subset = all(counts_for_subset_stratify >= 1) 
+
+        stratify_subset_labels = labels_filtered if len(unique_labels_for_subset_stratify) > 1 and can_stratify_subset else None
+        if stratify_subset_labels is None and len(unique_labels_for_subset_stratify) > 1:
+            print("Warning: Cannot stratify subset due to low class counts after initial filtering. Proceeding without stratification for subset.")
+
         try:
             texts_to_process, _, labels_to_process, _ = sk_train_test_split(
-                texts_full, labels_full, train_size=subset_percentage, random_state=random_state, 
-                stratify=labels_full if len(unique_labels_full) > 1 else None)
+                texts_filtered, labels_filtered, train_size=subset_percentage, random_state=random_state, 
+                stratify=stratify_subset_labels)
         except ValueError as e:
-            print(f"Error during stratified subset split: {e}")
+            print(f"Error during stratified subset split (even after initial filtering): {e}")
             print("Attempting subset split without stratification...")
             texts_to_process, _, labels_to_process, _ = sk_train_test_split(
-                texts_full, labels_full, train_size=subset_percentage, random_state=random_state, stratify=None)
+                texts_filtered, labels_filtered, train_size=subset_percentage, random_state=random_state, stratify=None)
+        
         print(f"Subset size: {len(texts_to_process)}")
-        if len(texts_to_process) == 0: print("Error: Subset empty."); return None, None, None, None
-    
+        if len(texts_to_process) == 0: print("Error: Subset empty after selection."); return None, None, None, None
+    elif subset_percentage >= 1.0:
+        print(f"\nUsing 100% of the (filtered) data (subset_percentage={subset_percentage}). No further subsetting.")
+    else: # subset_percentage is 0 or negative
+        print(f"\nWarning: subset_percentage is {subset_percentage}. Using 100% of the (filtered) data.")
+        
     if not isinstance(labels_to_process, np.ndarray): labels_to_process = np.array(labels_to_process)
     
     unique_labels_to_process = sorted(list(set(labels_to_process)))
     unique_labels_to_process_str = [f"Class {l}" for l in unique_labels_to_process]
-    print(f"Unique labels in data for processing: {len(unique_labels_to_process)}")
+    print(f"Unique labels in data finally selected for processing: {len(unique_labels_to_process)}")
     
     return texts_to_process, labels_to_process, unique_labels_to_process, unique_labels_to_process_str
 
+
 def generate_word2vec_doc_features(texts, w2v_model, vector_size):
-    """Generates document features by averaging Word2Vec vectors of words in a document."""
+# ... (rest of the function is the same)
     features = []
-    for text in texts:
-        # Simple tokenization, consider NLTK's word_tokenize for more complex cases
+    for text_idx, text in enumerate(texts):
         tokens = text.lower().split() 
         word_vectors = [w2v_model.wv[word] for word in tokens if word in w2v_model.wv]
         if not word_vectors:
-            features.append(np.zeros(vector_size)) # Zero vector for documents with no known words
+            features.append(np.zeros(vector_size)) 
         else:
             features.append(np.mean(word_vectors, axis=0))
     return np.array(features)
@@ -158,21 +196,32 @@ def perform_k_fold_cv_and_report(
     texts_to_process, labels_to_process, 
     unique_labels_to_process, unique_labels_to_process_str,
     n_splits_cv, 
-    feature_config, # Dictionary: {'method': 'sklearn_vectorizer'/'word2vec', 'class': ..., 'params': ...}
-    model_class, model_init_params, # Classifier class and its initialization parameters
-    run_identifier_string, # Descriptive string for this run, e.g., "LogRegr_Word2Vec (volume)"
-    cv_output_dir, random_state=42
+    feature_config, 
+    model_class, model_init_params, 
+    run_identifier_string, 
+    cv_output_dir, random_state=42,
+    save_trained_features=True, 
+    load_trained_features_if_exist=True 
 ):
-    """Performs K-Fold CV, generates and saves reports for a given model and feature method."""
+# ... (rest of the function is the same)
     print(f"\n--- Performing {n_splits_cv}-Fold Cross-Validation with {run_identifier_string} ---")
     
     if len(texts_to_process) < n_splits_cv:
         print(f"Error: Samples ({len(texts_to_process)}) < N_SPLITS_CV ({n_splits_cv}). Cannot perform K-Fold CV."); return False
 
-    min_samples_per_class_for_kfold = n_splits_cv
+    # This check is now more critical after pre-filtering in load_and_preprocess_data
+    # StratifiedKFold itself requires at least n_splits members for each class.
+    min_samples_per_class_for_kfold = n_splits_cv 
     class_counts = np.unique(labels_to_process, return_counts=True)[1]
     if np.any(class_counts < min_samples_per_class_for_kfold):
-        print(f"Warning: Some classes have fewer than {min_samples_per_class_for_kfold} samples. StratifiedKFold may be affected.")
+        problematic_classes = np.unique(labels_to_process)[class_counts < min_samples_per_class_for_kfold]
+        print(f"Critical Warning: After all preprocessing, some classes still have fewer than {min_samples_per_class_for_kfold} samples (required for n_splits={n_splits_cv} in StratifiedKFold).")
+        print(f"Problematic classes (label: count):")
+        for pc in problematic_classes:
+            print(f"  Class {pc}: {class_counts[np.unique(labels_to_process) == pc][0]} samples")
+        print("StratifiedKFold will likely fail. Consider reducing n_splits_cv, using a larger dataset/subset, or further data augmentation/filtering.")
+        # Depending on strictness, you might want to return False here
+        # return False 
 
     skf = StratifiedKFold(n_splits=n_splits_cv, shuffle=True, random_state=random_state)
     fold_accuracies = []
@@ -183,6 +232,13 @@ def perform_k_fold_cv_and_report(
     if degrees_freedom > 0: t_critical = t.ppf(1 - alpha_ci / 2, degrees_freedom)
     else: print("Warning: N_SPLITS_CV <= 1, CI for metrics will not be calculated.")
 
+    feature_models_cv_dir = os.path.join(cv_output_dir, "feature_models_fold")
+    if (save_trained_features or load_trained_features_if_exist):
+        os.makedirs(feature_models_cv_dir, exist_ok=True)
+    
+    sanitized_run_id_for_filename = "".join(c if c.isalnum() else "_" for c in run_identifier_string.split('(')[0].strip())
+
+
     for fold_idx, (train_indices, val_indices) in enumerate(skf.split(texts_to_process_np, labels_to_process)):
         fold_num = fold_idx + 1; print(f"\nProcessing Fold {fold_num}/{n_splits_cv}...")
         start_fold_time = time.time()
@@ -192,32 +248,63 @@ def perform_k_fold_cv_and_report(
         print(f"Train: {len(X_train_fold_texts)}, Val: {len(X_val_fold_texts)}")
 
         X_train_fold_transformed, X_val_fold_transformed = None, None
+        
+        feature_model_path = os.path.join(
+            feature_models_cv_dir, 
+            f"{feature_config['method']}_{sanitized_run_id_for_filename}_fold_{fold_num}.model"
+        )
 
         if feature_config['method'] == 'sklearn_vectorizer':
-            vectorizer = feature_config['class'](**feature_config['params'])
-            X_train_fold_transformed = vectorizer.fit_transform(X_train_fold_texts)
-            X_val_fold_transformed = vectorizer.transform(X_val_fold_texts)
-        elif feature_config['method'] == 'word2vec':
-            tokenized_train_texts = [text.lower().split() for text in X_train_fold_texts]
-            w2v_train_params = feature_config['params'].copy() # Use a copy
-            w2v_train_params['seed'] = random_state # for reproducibility of Word2Vec training
+            vectorizer = None
+            if load_trained_features_if_exist and os.path.exists(feature_model_path):
+                print(f"Loading pre-trained Sklearn Vectorizer for fold {fold_num} from {feature_model_path}...")
+                vectorizer = joblib.load(feature_model_path)
+                print("Vectorizer loaded.")
+            else:
+                print(f"Training Sklearn Vectorizer ({feature_config['class'].__name__}) for fold {fold_num}...")
+                vectorizer = feature_config['class'](**feature_config['params'])
+                vectorizer.fit(X_train_fold_texts) 
+                print("Vectorizer trained.")
+                if save_trained_features:
+                    print(f"Saving Vectorizer for fold {fold_num} to {feature_model_path}...")
+                    joblib.dump(vectorizer, feature_model_path)
+                    print("Vectorizer saved.")
             
-            print(f"Training Word2Vec model for fold {fold_num}...")
-            w2v_model = Word2Vec(sentences=tokenized_train_texts, **w2v_train_params)
-            print("Word2Vec model trained.")
+            X_train_fold_transformed = vectorizer.transform(X_train_fold_texts)
+            X_val_fold_transformed = vectorizer.transform(X_val_fold_texts)
 
-            vector_size = w2v_train_params.get('vector_size', 100) # Ensure consistency
+        elif feature_config['method'] == 'word2vec':
+            w2v_model = None
+            w2v_train_params = feature_config['params'].copy()
+            w2v_train_params['seed'] = random_state 
+            vector_size = w2v_train_params.get('vector_size', 100)
+
+            if load_trained_features_if_exist and os.path.exists(feature_model_path):
+                print(f"Loading pre-trained Word2Vec model for fold {fold_num} from {feature_model_path}...")
+                w2v_model = Word2Vec.load(feature_model_path)
+                print("Word2Vec model loaded.")
+            else:
+                tokenized_train_texts = [text.lower().split() for text in X_train_fold_texts]
+                print(f"Training Word2Vec model for fold {fold_num}...")
+                w2v_model = Word2Vec(sentences=tokenized_train_texts, **w2v_train_params)
+                print("Word2Vec model trained.")
+                if save_trained_features:
+                    print(f"Saving Word2Vec model for fold {fold_num} to {feature_model_path}...")
+                    w2v_model.save(feature_model_path)
+                    print("Word2Vec model saved.")
+            
             X_train_fold_transformed = generate_word2vec_doc_features(X_train_fold_texts, w2v_model, vector_size)
             X_val_fold_transformed = generate_word2vec_doc_features(X_val_fold_texts, w2v_model, vector_size)
         else:
             raise ValueError(f"Unsupported feature_config method: {feature_config['method']}")
         
         current_model_params = model_init_params.copy()
-        if 'random_state' not in current_model_params: # Add random_state if model supports it and not already set
-             try: # Check if model can accept random_state
-                test_model = model_class(random_state=random_state, **current_model_params)
+        if 'random_state' not in current_model_params: 
+             try: 
+                _ = model_class(random_state=random_state, **current_model_params) 
                 current_model_params['random_state'] = random_state
-             except TypeError: pass # Model doesn't accept random_state or it's already set
+             except TypeError: 
+                pass 
 
         fold_model = model_class(**current_model_params)
         fold_model.fit(X_train_fold_transformed, y_train_fold)
@@ -238,19 +325,22 @@ def perform_k_fold_cv_and_report(
     mean_report_metrics = {}
     report_keys_for_mean_calc = unique_labels_to_process_str + ['macro avg', 'weighted avg']
     for key in report_keys_for_mean_calc:
-        if all_fold_report_dicts and key in all_fold_report_dicts[0]:
+        if all_fold_report_dicts and key in all_fold_report_dicts[0]: 
             mean_report_metrics[key] = {}
             for metric_name in ['precision', 'recall', 'f1-score']:
-                if metric_name in all_fold_report_dicts[0][key]:
+                if key in all_fold_report_dicts[0] and metric_name in all_fold_report_dicts[0][key]:
                     metric_values = [fr[key][metric_name] for fr in all_fold_report_dicts if key in fr and metric_name in fr[key]]
-                    if not metric_values: continue
+                    if not metric_values: continue 
                     mean_val, std_val = np.mean(metric_values), np.std(metric_values)
-                    sem_val, moe_val = 0, 0
-                    if n_splits_cv > 1 and t_critical > 0: sem_val = std_val / np.sqrt(n_splits_cv); moe_val = t_critical * sem_val
+                    sem_val, moe_val = 0, 0 
+                    if n_splits_cv > 1 and t_critical > 0: 
+                        sem_val = std_val / np.sqrt(n_splits_cv)
+                        moe_val = t_critical * sem_val
                     mean_report_metrics[key][metric_name] = {'mean': mean_val, 'moe': moe_val}
-            if 'support' in all_fold_report_dicts[0][key]:
+            if key in all_fold_report_dicts[0] and 'support' in all_fold_report_dicts[0][key]:
                 support_values = [fr[key]['support'] for fr in all_fold_report_dicts if key in fr and 'support' in fr[key]]
-                if support_values: mean_report_metrics[key]['support'] = {'mean': np.mean(support_values)}
+                if support_values: 
+                    mean_report_metrics[key]['support'] = {'mean': np.mean(support_values)}
     
     formatted_mean_report_str = format_mean_report_to_string(mean_report_metrics, unique_labels_to_process_str, include_ci=(t_critical > 0))
     mean_report_str_path = os.path.join(cv_output_dir, "mean_classification_report.txt")
@@ -259,24 +349,24 @@ def perform_k_fold_cv_and_report(
     print(f"Mean classification report (TXT) with CIs saved to {mean_report_str_path}") 
     return True
 
-def run_classification_and_report( # Renamed from run_svm_classification
+def run_classification_and_report(
     X_train_features, X_test_features, y_train, y_test, 
-    model_class, model_init_params, # Classifier class and its initialization parameters
-    run_identifier_string, # Descriptive string for this run, e.g., "LogRegr_Word2Vec (Single Split - volume)"
+    model_class, model_init_params, 
+    run_identifier_string, 
     labels=None, target_names=None, output_dir=None, random_state=42
 ):
-    """Trains a given model, predicts, evaluates, and optionally saves reports."""
+# ... (rest of the function is the same)
     print(f"\n--- Running Classification with {run_identifier_string} ---")
     print(f"Training {model_class.__name__} classifier...")
     start_time = time.time()
     
     current_model_params = model_init_params.copy()
-    if 'random_state' not in current_model_params: # Add random_state if model supports it
+    if 'random_state' not in current_model_params: 
         try:
-            test_model = model_class(random_state=random_state, **current_model_params) # Check if model can accept random_state
+            _ = model_class(random_state=random_state, **current_model_params) 
             current_model_params['random_state'] = random_state
         except TypeError:
-            pass # Model doesn't accept random_state or it's already set in model_init_params
+            pass 
 
     classifier = model_class(**current_model_params)
     classifier.fit(X_train_features, y_train)
@@ -292,10 +382,22 @@ def run_classification_and_report( # Renamed from run_svm_classification
     
     report_str, report_dict = "", {}
     try:
-        report_str = classification_report(y_test, y_pred, labels=labels, target_names=target_names, zero_division=0)
+        actual_labels_for_report = labels if labels is not None else sorted(list(np.unique(np.concatenate((y_test, y_pred)))))
+        actual_target_names_for_report = target_names
+        if target_names is None and labels is not None: 
+             actual_target_names_for_report = [f"Class {l}" for l in actual_labels_for_report]
+
+
+        report_str = classification_report(y_test, y_pred, labels=actual_labels_for_report, target_names=actual_target_names_for_report, zero_division=0)
         print(f"\nClassification Report for {run_identifier_string}:\n{report_str}")
-        if output_dir: report_dict = classification_report(y_test, y_pred, labels=labels, target_names=target_names, output_dict=True, zero_division=0)
-    except ValueError as e: print(f"Could not generate classification report: {e}")
+        if output_dir: 
+            report_dict = classification_report(y_test, y_pred, labels=actual_labels_for_report, target_names=actual_target_names_for_report, output_dict=True, zero_division=0)
+    except ValueError as e: 
+        print(f"Could not generate classification report: {e}")
+        print(f"y_test unique: {np.unique(y_test)}, y_pred unique: {np.unique(y_pred)}")
+        print(f"Labels for report: {actual_labels_for_report}")
+        print(f"Target names for report: {actual_target_names_for_report}")
+
 
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
