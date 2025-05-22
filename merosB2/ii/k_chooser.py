@@ -16,9 +16,9 @@ TEXT_COLUMN_TO_USE = 'text'  # 'summary' or 'text'
 # The assignment states: "κείμενα των αποφάσεων (ή των περιλήψεων τους)"
 
 VECTORIZATION_METHOD = 'tfidf' # TF-IDF is a common choice for K-means
-MIN_K_TO_TEST = 2           # Minimum K value to test
-MAX_K_TO_TEST = 102         # Range of K values to test (e.g., 2 to 100)
-K_STEP = 10                  # Step for K values
+MIN_K_TO_TEST = 15           # Minimum K value to test
+MAX_K_TO_TEST = 25         # Range of K values to test (e.g., 2 to 100)
+K_STEP = 1                  # Step for K values
 RANDOM_STATE = 42           # For reproducibility
 
 def load_and_prepare_data():

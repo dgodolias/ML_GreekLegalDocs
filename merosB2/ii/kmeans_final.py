@@ -3,12 +3,11 @@ from datasets import load_dataset
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score, silhouette_samples # Removed NMI and ARI
 import warnings
 import os # Import os module for path manipulation
 
 # --- Configuration ---
-CHOSEN_K = 20  # <--- !!! SET YOUR CHOSEN K HERE !!! (e.g., based on k_chooser.py results)
+CHOSEN_K = 21  # <--- !!! SET YOUR CHOSEN K HERE !!! (e.g., based on k_chooser.py results)
 TEXT_COLUMN_TO_USE = 'summary'  # 'summary' or 'text'
 VECTORIZATION_METHOD = 'tfidf' # TF-IDF
 RANDOM_STATE = 42           # For reproducibility
