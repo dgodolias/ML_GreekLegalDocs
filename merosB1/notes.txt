@@ -1,5 +1,13 @@
+Μερος Β1:
+
 -na anaferw to kfold k ta DE 
--na anaferw to startification
+-na anaferw to stratification
 -na dialejw metajy micro-macro k gt
--na pw oti ekana kfold sto label volume, alla oxi sta alla 2 gia na ginei pio grhgora
+-na pw oti ekana kfold sto label volume se olous tous algoritmous, alla oxi sta alla 2 gia na ginei pio grhgora
 -na dw ti paizei me to validation
+-na sygkrinw ta apotelesmata me to thewritiko tyxaio baseline
+-na grapsw gt diegrapsa ta samples poy antistoixoyn se kathgories me paradeigmata <2 h <5??
+
+Μερος Β2:
+
+-gt dialeja ta summaries k oxi ta texts

@@ -15,8 +15,8 @@ from utils import (
 )
 
 # --- Configuration ---
-DATASET_CONFIG = "chapter" # available options: "volume", "chapter", "subject"
-SUBSET_PERCENTAGE = 1.0 # 1.0 for full data, < 1.0 for subset
+DATASET_CONFIG = "subject" # available options: "volume", "chapter", "subject"
+SUBSET_PERCENTAGE = 0.3 # 1.0 for full data, < 1.0 for subset
 N_SPLITS_CV = 1 # 1 for single train/test split, > 1 for K-Fold CV
 RANDOM_STATE = 42
 VECTORIZER_MAX_FEATURES = 5000

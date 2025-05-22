@@ -180,16 +180,13 @@ def run_experiment(
 
     # --- Label Encoding ---
     le = LabelEncoder()
-    # labels_to_process contains the original, potentially sparse, integer labels.
-    # y_processed_encoded will contain labels from 0 to N-1.
+
     y_processed_encoded = le.fit_transform(labels_to_process)
-    # le.classes_ holds the sorted unique original labels, which should match unique_labels_to_process.
+
     
     num_encoded_classes = len(le.classes_)
-    # These are the labels [0, 1, ..., N-1] for classification_report's 'labels' argument
+
     report_labels_for_sklearn = list(range(num_encoded_classes))
-    # 'unique_labels_to_process_str' is passed in and is suitable for 'target_names' in classification_report.
-    # It's derived from unique_labels_to_process, which should align with le.classes_
 
     # --- SINGLE TRAIN/TEST SPLIT (n_splits = 1) ---
     if n_splits == 1:
@@ -278,10 +275,6 @@ def run_experiment(
         # If model is XGBoost, ensure num_class is set (though it should infer correctly with encoded labels)
         if "XGBClassifier" in str(model_class): # Check if it's an XGBoost model
             current_model_params['num_class'] = num_encoded_classes
-            # XGBoost's use_label_encoder is deprecated and handled internally if y is int.
-            # If 'use_label_encoder' was in model_init_params, it might be good to remove it here
-            # or ensure it's False, as we are doing manual encoding.
-            # current_model_params.pop('use_label_encoder', None) # Example if it was there
 
         classifier = model_class(**current_model_params)
         classifier.fit(X_train_transformed, y_train) # y_train is encoded
