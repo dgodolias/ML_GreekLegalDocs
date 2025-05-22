@@ -53,7 +53,6 @@ def main_logregr_word2vec():
             'workers': WORD2VEC_WORKERS,
             'sg': WORD2VEC_SG,
             'epochs': WORD2VEC_EPOCHS
-            # 'seed' will be handled by run_experiment for reproducibility
         }
     }
     

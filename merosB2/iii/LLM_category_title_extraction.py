@@ -111,7 +111,6 @@ def call_actual_llm(prompt_text: str) -> str:
         theme_content = "Mock: Σχετικά με " + ", ".join(keywords[:2]) if keywords else "Mock: Γενικό θέμα"
         return f"Θέμα:\n\"{theme_content}\"" # Return raw mock response in expected LLM format, with quotes
 
-    model_to_use = "google/gemma-3-4b-it:free"
     effective_system_prompt = (
         "Είσαι ένας βοηθός που εξάγει το κεντρικό θέμα από τα παρεχόμενα κείμενα. "
         "Απάντησε ΜΟΝΟ με το θέμα ακολουθώντας τη μορφή <ο τίτλος>, Για παραδειγμα: "
@@ -127,7 +126,6 @@ def call_actual_llm(prompt_text: str) -> str:
         raw_response = send_message_to_llm(
             user_message=prompt_text,
             system_message=effective_system_prompt,
-            model=model_to_use
         )
         
         if raw_response: 
@@ -218,8 +216,6 @@ def parse_llm_response(raw_llm_output: str) -> str:
     if cleaned_theme == raw_llm_output and (cleaned_theme.startswith("Θέμα:") or cleaned_theme.lower().startswith("θέμα:")):
         return f"Σφάλμα ανάλυσης LLM (αμετάβλητο): {cleaned_theme[:70]}"
 
-    # Return the cleaned theme text directly, without adding extra quotes.
-    # Pandas to_csv will handle CSV quoting.
     return cleaned_theme
 
 

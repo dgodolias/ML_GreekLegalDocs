@@ -11,14 +11,13 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # --- Configuration ---
-TEXT_COLUMN_TO_USE = 'text'  # 'summary' or 'text'
+TEXT_COLUMN_TO_USE = 'summary'  # 'summary' or 'text'
 # Using 'summary' as it's generally cleaner and less computationally intensive
-# The assignment states: "κείμενα των αποφάσεων (ή των περιλήψεων τους)"
 
 VECTORIZATION_METHOD = 'tfidf' # TF-IDF is a common choice for K-means
-MIN_K_TO_TEST = 15           # Minimum K value to test
-MAX_K_TO_TEST = 25         # Range of K values to test (e.g., 2 to 100)
-K_STEP = 1                  # Step for K values
+MIN_K_TO_TEST = 2           # Minimum K value to test
+MAX_K_TO_TEST = 202         # Range of K values to test (e.g., 2 to 100)
+K_STEP = 5                  # Step for K values
 RANDOM_STATE = 42           # For reproducibility
 
 def load_and_prepare_data():
@@ -57,16 +56,8 @@ def load_and_prepare_data():
 
     print(f"\nDataFrame created. Shape: {df.shape}")
     
-    # Fill NaN in the text column to be used for vectorization
     df[TEXT_COLUMN_TO_USE] = df[TEXT_COLUMN_TO_USE].fillna('')
     
-    # For NMI, case_category and case_tags are used. NaNs in these will be handled during NMI calculation.
-    # Ensure case_tags are strings if they are to be used directly for NMI
-    # If case_tags can be lists, they need to be converted to a hashable, comparable format (e.g., sorted tuple of strings)
-    # Based on EDA, case_tags are initially objects (likely strings representing combined tags)
-    # df['case_tags'] = df['case_tags'].apply(lambda x: tuple(sorted(x)) if isinstance(x, list) else x)
-    # No, the EDA showed that the original string form of case_tags is what we need for NMI.
-    # df.info() showed case_tags as object, and describe() showed unique string combinations.
 
     return df
 
@@ -74,21 +65,16 @@ def vectorize_texts(texts_series, method='tfidf'):
     """Vectorizes texts using the specified method."""
     print(f"\nVectorizing texts using {method} on '{TEXT_COLUMN_TO_USE}' column...")
     if method == 'tfidf':
-        # Common TF-IDF parameters; can be tuned further
+
         vectorizer = TfidfVectorizer(
-            max_df=0.90,  # Ignore terms that appear in more than 90% of documents
-            min_df=5,     # Ignore terms that appear in less than 5 documents
-            ngram_range=(1, 2),  # Consider unigrams and bigrams
-            stop_words=None # No standard Greek stop words in sklearn; could add custom list
+            max_df=0.90,  
+            min_df=5,     
+            ngram_range=(1, 2), 
+            stop_words=None 
         )
         X = vectorizer.fit_transform(texts_series)
         print(f"TF-IDF matrix shape: {X.shape}")
         return X, vectorizer
-    # Add other methods like Word2Vec, FastText, GloVe if needed, similar to B1
-    # elif method == 'dense_embeddings':
-    #     # Placeholder for dense embeddings logic
-    #     print("Dense embeddings not implemented in this script version.")
-    #     return None, None
     else:
         raise ValueError(f"Unsupported vectorization method: {method}")
 
@@ -110,8 +96,8 @@ def run_kmeans_and_evaluate(X, df, min_k, max_k, k_step):
     silhouette_scores_macro = []
     nmi_category_scores = []
     nmi_tags_scores = []
-    ari_category_scores = [] # New: For ARI with case_category
-    ari_tags_scores = []   # New: For ARI with case_tags
+    ari_category_scores = [] 
+    ari_tags_scores = []   
 
     true_labels_category_full = df['case_category']
     true_labels_tags_full = df['case_tags'] 
@@ -146,7 +132,7 @@ def run_kmeans_and_evaluate(X, df, min_k, max_k, k_step):
                 cluster_labels[valid_indices_category]
             )
             nmi_category_scores.append(nmi_cat)
-            ari_cat = adjusted_rand_score( # Calculate ARI for category
+            ari_cat = adjusted_rand_score( 
                 true_labels_category_full[valid_indices_category],
                 cluster_labels[valid_indices_category]
             )
@@ -162,7 +148,7 @@ def run_kmeans_and_evaluate(X, df, min_k, max_k, k_step):
                 cluster_labels[valid_indices_tags]
             )
             nmi_tags_scores.append(nmi_tag)
-            ari_tag = adjusted_rand_score( # Calculate ARI for tags
+            ari_tag = adjusted_rand_score( 
                 true_labels_tags_full[valid_indices_tags],
                 cluster_labels[valid_indices_tags]
             )
@@ -221,7 +207,6 @@ def plot_evaluation_metrics(k_values, wcss, s_micro, s_macro, nmi_cat, nmi_tag, 
     plt.tight_layout(rect=[0, 0, 1, 0.96]) 
     plt.show()
 
-    # Removed the printed comments on K selection from here
 
 def main():
     """Main function to orchestrate the K-means analysis."""

@@ -3,29 +3,27 @@ import json
 from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
 
-# Explicitly find and load .env file, overriding existing environment variables
-dotenv_path = find_dotenv(raise_error_if_not_found=False) # Try to find .env
+
+dotenv_path = find_dotenv(raise_error_if_not_found=False) 
 print(f"Found .env file at: {dotenv_path}")
 
-# Print API key from environment BEFORE loading .env (if it exists)
 api_key_before_load = os.getenv("OPENROUTER_API_KEY")
 
 if dotenv_path:
     load_dotenv(dotenv_path=dotenv_path, override=True)
     print(f"Loaded .env file from: {dotenv_path} with override=True")
 else:
-    # Fallback to default load_dotenv behavior if find_dotenv fails, though it should find it if it's in the root
+
     load_dotenv(override=True)
     print("Could not specifically locate .env, attempting default load_dotenv(override=True)")
 
 
-# Get API key from environment variable AFTER loading .env
 api_key = os.getenv("OPENROUTER_API_KEY")
 
-# Initialize the OpenAI client with OpenRouter endpoint
+
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=api_key, # Use the loaded api_key variable
+    api_key=api_key,
 )
 
 # Available models with fallbacks

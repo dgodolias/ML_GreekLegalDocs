@@ -82,7 +82,6 @@ def main_svm_bow():
         print("Failed to load or preprocess data. Exiting.")
         return
 
-    # Run the experiment
     success = run_experiment(
         texts_to_process=texts_proc,
         labels_to_process=labels_proc,

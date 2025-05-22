@@ -11,7 +11,7 @@ CHOSEN_K = 21  # <--- !!! SET YOUR CHOSEN K HERE !!! (e.g., based on k_chooser.p
 TEXT_COLUMN_TO_USE = 'summary'  # 'summary' or 'text'
 VECTORIZATION_METHOD = 'tfidf' # TF-IDF
 RANDOM_STATE = 42           # For reproducibility
-# Construct the output path relative to the script's directory
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_CSV_FILE = os.path.join(SCRIPT_DIR, '..', 'documents_with_clusters.csv') # File to save results
 
@@ -106,10 +106,8 @@ def main():
 
     df_with_clusters, kmeans_model = run_final_kmeans(X, df_original, CHOSEN_K)
 
-    # Save the DataFrame with cluster assignments
+
     try:
-        # Ensure the directory exists if it's not the current one
-        # os.path.normpath will resolve ".." components if OUTPUT_CSV_FILE is absolute
         output_path_normalized = os.path.normpath(OUTPUT_CSV_FILE)
         output_dir = os.path.dirname(output_path_normalized)
         if output_dir and not os.path.exists(output_dir):

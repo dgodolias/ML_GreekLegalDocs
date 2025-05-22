@@ -70,7 +70,6 @@ def main_xgboost_word2vec(): # Renaming to main_xgboost_w2v for consistency if p
         'max_depth': XGB_MAX_DEPTH,
         'eval_metric': XGB_EVAL_METRIC,
         'random_state': RANDOM_STATE,
-        # 'use_label_encoder': XGB_USE_LABEL_ENCODER # Not needed for XGBoost >= 1.3.0 if y is int
     }
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
