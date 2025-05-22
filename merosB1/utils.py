@@ -1,3 +1,4 @@
+import functools
 import os
 import time
 import json
@@ -10,8 +11,27 @@ from sklearn.linear_model import LogisticRegression # Added
 from sklearn.metrics import accuracy_score, classification_report
 from gensim.models import Word2Vec # Added for Word2Vec
 
-# nltk.download('punkt') # Ensure punkt tokenizer is available if using nltk.word_tokenize
-# from nltk.tokenize import word_tokenize # Optional: for more advanced tokenization
+def script_execution_timer(func):
+    """Decorator to time the execution of a script/function."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        script_name = func.__name__
+        start_time_sec = time.time()
+        start_time_readable = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time_sec))
+        
+        print(f"\n--- Script '{script_name}' started at: {start_time_readable} ---")
+        
+        result = func(*args, **kwargs) # Execute the decorated function
+        
+        end_time_sec = time.time()
+        end_time_readable = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time_sec))
+        
+        duration = end_time_sec - start_time_sec
+        
+        print(f"--- Script '{script_name}' finished at: {end_time_readable} ---")
+        print(f"--- Total execution time for '{script_name}': {duration:.2f} seconds ---\n")
+        return result
+    return wrapper
 
 def format_mean_report_to_string(mean_report_dict, report_class_labels_str, include_ci=False):
     """Formats the mean classification report dictionary into a string."""

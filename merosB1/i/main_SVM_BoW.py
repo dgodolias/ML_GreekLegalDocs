@@ -11,11 +11,12 @@ from sklearn.svm import SVC # Import SVC
 from utils import (
     run_classification_and_report, # Updated name
     load_and_preprocess_data,
-    perform_k_fold_cv_and_report
+    perform_k_fold_cv_and_report,
+    script_execution_timer
 )
 
 # --- Configuration ---
-DATASET_CONFIG = "volume" 
+DATASET_CONFIG = "chapter" # available options: "volume", "chapter", "subject"
 USE_SUBSET_FOR_CV_DATA = False
 SUBSET_PERCENTAGE = 0.2 
 PERFORM_K_FOLD_CV = True
@@ -24,6 +25,7 @@ RANDOM_STATE = 42
 VECTORIZER_MAX_FEATURES = 5000
 # --- End Configuration ---
 
+@script_execution_timer
 def main_svm_bow(): # Renamed for clarity
     model_name_script = "SVM"
     feature_method_name = "BoW"

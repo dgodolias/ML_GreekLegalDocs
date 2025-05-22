@@ -12,13 +12,14 @@ from utils import (
     run_classification_and_report, 
     load_and_preprocess_data,
     perform_k_fold_cv_and_report,
-    generate_word2vec_doc_features # For single run
+    generate_word2vec_doc_features, # For single run
+    script_execution_timer # Import the new decorator
 )
 from gensim.models import Word2Vec # For single run Word2Vec training
 
 # --- Configuration ---
-DATASET_CONFIG = "volume" 
-USE_SUBSET_FOR_CV_DATA = True
+DATASET_CONFIG = "volume"  # available options: "volume", "chapter", "subject"
+USE_SUBSET_FOR_CV_DATA = False
 SUBSET_PERCENTAGE = 0.2
 PERFORM_K_FOLD_CV = True
 N_SPLITS_CV = 5
@@ -32,7 +33,9 @@ WORD2VEC_SG = 0 # 0 for CBOW, 1 for Skip-gram
 WORD2VEC_EPOCHS = 10 # Gensim 4.x uses 'epochs'
 # --- End Configuration ---
 
+@script_execution_timer # Apply the decorator here
 def main_logregr_word2vec():
+# ...existing code...
     model_name_script = "LogRegr"
     feature_method_name = "Word2Vec"
     
