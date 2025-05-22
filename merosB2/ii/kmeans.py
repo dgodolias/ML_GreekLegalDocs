@@ -11,12 +11,14 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # --- Configuration ---
-TEXT_COLUMN_TO_USE = 'summary'  # 'summary' or 'text'
+TEXT_COLUMN_TO_USE = 'text'  # 'summary' or 'text'
 # Using 'summary' as it's generally cleaner and less computationally intensive
 # The assignment states: "κείμενα των αποφάσεων (ή των περιλήψεων τους)"
 
 VECTORIZATION_METHOD = 'tfidf' # TF-IDF is a common choice for K-means
-MAX_K_TO_TEST = 20          # Range of K values to test (e.g., 2 to 20)
+MIN_K_TO_TEST = 2           # Minimum K value to test
+MAX_K_TO_TEST = 102         # Range of K values to test (e.g., 2 to 100)
+K_STEP = 10                  # Step for K values
 RANDOM_STATE = 42           # For reproducibility
 
 def load_and_prepare_data():
@@ -90,11 +92,20 @@ def vectorize_texts(texts_series, method='tfidf'):
     else:
         raise ValueError(f"Unsupported vectorization method: {method}")
 
-def run_kmeans_and_evaluate(X, df, max_k):
+def run_kmeans_and_evaluate(X, df, min_k, max_k, k_step):
     """Runs K-means for a range of K and calculates evaluation metrics."""
-    print(f"\nRunning K-means for K from 2 to {max_k}...")
+    print(f"\nRunning K-means for K from {min_k} to {max_k} with a step of {k_step}...")
     
-    k_values = range(2, max_k + 1)
+    # Generate K values starting from min_k, up to max_k, with the specified step
+    k_values = list(range(min_k, max_k + 1, k_step))
+    if not k_values: # Ensure there's at least one k value if max_k is small or step is large
+        if max_k >= min_k:
+             k_values = [min_k] # Default to min_k if step makes range empty but max_k allows
+        else: # If max_k < min_k, no K-means can be run
+            print(f"max_k ({max_k}) is less than min_k ({min_k}), K-means cannot be run.")
+            return [], [], [], [], [], []
+
+
     wcss = []  # Within-cluster sum of squares (for Elbow method)
     silhouette_scores_micro = []
     silhouette_scores_macro = []
@@ -161,6 +172,10 @@ def run_kmeans_and_evaluate(X, df, max_k):
 
 def plot_evaluation_metrics(k_values, wcss, s_micro, s_macro, nmi_cat, nmi_tag):
     """Plots the evaluation metrics for choosing K."""
+    if not k_values:
+        print("No K values to plot. Skipping plotting.")
+        return
+        
     print("\nPlotting evaluation metrics...")
     plt.style.use('seaborn-v0_8-whitegrid') # Using a seaborn style
     fig, axs = plt.subplots(2, 2, figsize=(18, 12))
@@ -230,11 +245,14 @@ def main():
         print("Text vectorization failed. Exiting.")
         return
 
-    k_values, wcss, s_micro, s_macro, nmi_cat, nmi_tag = run_kmeans_and_evaluate(X, df, MAX_K_TO_TEST)
+    k_values, wcss, s_micro, s_macro, nmi_cat, nmi_tag = run_kmeans_and_evaluate(X, df, MIN_K_TO_TEST, MAX_K_TO_TEST, K_STEP)
     
-    plot_evaluation_metrics(k_values, wcss, s_micro, s_macro, nmi_cat, nmi_tag)
+    if k_values: # Only plot if k_values were generated
+        plot_evaluation_metrics(k_values, wcss, s_micro, s_macro, nmi_cat, nmi_tag)
+        print("\nAnalysis complete. Review the plots and comments to choose an optimal K for part B2.iii.")
+    else:
+        print("\nAnalysis could not be completed as no valid K values were processed.")
 
-    print("\nAnalysis complete. Review the plots and comments to choose an optimal K for part B2.iii.")
 
 if __name__ == '__main__':
     main()

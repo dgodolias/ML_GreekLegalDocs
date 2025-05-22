@@ -11,3 +11,4 @@
 Μερος Β2:
 
 -gt dialeja ta summaries k oxi ta texts
+-να αναφερω οτι θα χρησιμοποιησω το macro avg silhouette sto kmeans λογωτ του imbalance των κατηγοριων των δεδομενων που βρηκαμε απο το EDA
