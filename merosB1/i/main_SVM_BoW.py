@@ -17,7 +17,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from utils import run_svm_classification
 
 # --- Configuration ---
-DATASET_CONFIG = "volume"  # Options: "volume", "chapter", "subject"
+DATASET_CONFIG = "chapter"  # Options: "volume", "chapter", "subject"
 USE_SUBSET_FOR_CV_DATA = True
 SUBSET_PERCENTAGE = 0.1
 PERFORM_K_FOLD_CV = True
@@ -123,10 +123,17 @@ def main_bow():
     texts_to_process, labels_to_process = texts_full, labels_full
     if USE_SUBSET_FOR_CV_DATA:
         print(f"\nSelecting a {SUBSET_PERCENTAGE*100:.0f}% subset...")
-        # ... (subset selection logic as before) ...
-        texts_to_process, _, labels_to_process, _ = train_test_split(
-            texts_full, labels_full, train_size=SUBSET_PERCENTAGE, random_state=42, 
-            stratify=labels_full if len(unique_labels_full) > 1 else None)
+        try:
+            texts_to_process, _, labels_to_process, _ = train_test_split(
+                texts_full, labels_full, train_size=SUBSET_PERCENTAGE, random_state=42, 
+                stratify=labels_full if len(unique_labels_full) > 1 else None)
+        except ValueError as e:
+            print(f"Error during stratified subset split: {e}")
+            print("Attempting subset split without stratification...")
+            texts_to_process, _, labels_to_process, _ = train_test_split(
+                texts_full, labels_full, train_size=SUBSET_PERCENTAGE, random_state=42, 
+                stratify=None)
+
         print(f"Subset size: {len(texts_to_process)}")
         if len(texts_to_process) == 0: print("Error: Subset empty."); return
     
@@ -137,7 +144,15 @@ def main_bow():
     print(f"Unique labels in data for processing: {len(unique_labels_to_process)}")
 
     if PERFORM_K_FOLD_CV and len(texts_to_process) < N_SPLITS_CV:
-        print(f"Error: Samples ({len(texts_to_process)}) < N_SPLITS_CV ({N_SPLITS_CV})."); return
+        print(f"Error: Samples ({len(texts_to_process)}) < N_SPLITS_CV ({N_SPLITS_CV}). Cannot perform K-Fold CV."); return
+    
+    min_samples_per_class_for_kfold = N_SPLITS_CV
+    if PERFORM_K_FOLD_CV:
+        class_counts = np.unique(labels_to_process, return_counts=True)[1]
+        if np.any(class_counts < min_samples_per_class_for_kfold):
+            print(f"Warning: Some classes in the data for processing have fewer than {min_samples_per_class_for_kfold} samples.")
+            print("StratifiedKFold may fail or produce unreliable results for these classes.")
+            # Optionally, you could switch PERFORM_K_FOLD_CV to False here or handle it differently
 
     if PERFORM_K_FOLD_CV:
         print(f"\n--- Performing {N_SPLITS_CV}-Fold Cross-Validation with {feature_name} on '{DATASET_CONFIG}' data ---")
@@ -158,7 +173,6 @@ def main_bow():
 
         for fold_idx, (train_indices, val_indices) in enumerate(skf.split(texts_to_process_np, labels_to_process)):
             fold_num = fold_idx + 1
-            # ... (fold processing, vectorization, SVM training, prediction as before) ...
             print(f"\nProcessing Fold {fold_num}/{N_SPLITS_CV}...")
             start_fold_time = time.time()
             X_train_fold, X_val_fold = texts_to_process_np[train_indices], texts_to_process_np[val_indices]
@@ -185,7 +199,7 @@ def main_bow():
             all_fold_report_dicts.append(report_dict_fold)
 
             with open(os.path.join(cv_output_dir, f"fold_{fold_num}_report.txt"), "w", encoding='utf-8') as f:
-                f.write(f"Classification Report for Fold {fold_num} ({feature_name} - {DATASET_CONFIG})\nAccuracy: {fold_accuracy:.4f}\n\n{report_str_fold}")
+                f.write(f"Classification Report for Fold {fold_num} ({feature_name})\nAccuracy: {fold_accuracy:.4f}\n\n{report_str_fold}")
             print(f"Fold {fold_num} report saved. Processed in {time.time() - start_fold_time:.2f}s.")
 
         # Calculate mean classification report with CIs
@@ -222,11 +236,11 @@ def main_bow():
         formatted_mean_report_str = format_mean_report_to_string(mean_report_metrics, unique_labels_to_process_str, include_ci=(t_critical > 0))
         mean_report_str_path = os.path.join(cv_output_dir, "mean_classification_report.txt")
         with open(mean_report_str_path, "w", encoding='utf-8') as f:
-            f.write(f"Mean Classification Report ({N_SPLITS_CV}-Folds, {feature_name} - {DATASET_CONFIG})\n\n{formatted_mean_report_str}")
+            f.write(f"Mean Classification Report ({N_SPLITS_CV}-Folds, {feature_name})\n\n{formatted_mean_report_str}")
         print(f"Mean classification report (TXT) saved to {mean_report_str_path}")
 
         # --- Start of new/modified summary generation ---
-        summary_str = f"\n--- K-Fold Cross-Validation Summary ({feature_name} - {DATASET_CONFIG}) ---\n"
+        summary_str = f"\n--- K-Fold Cross-Validation Summary ({feature_name}) ---\n"
         summary_str += f"Number of Folds: {N_SPLITS_CV}\n"
 
         # Calculate and add stats for Accuracy
@@ -234,77 +248,22 @@ def main_bow():
         if fold_accuracies:
             mean_acc_val = np.mean(fold_accuracies)
             std_acc_val = np.std(fold_accuracies)
-            summary_str += f"  Individual Fold Values: {[round(val, 4) for val in fold_accuracies]}\n"
-            summary_str += f"  Mean: {mean_acc_val:.4f}\n"
+            summary_str += f"  Individual Fold Accuracies: {[round(val, 4) for val in fold_accuracies]}\n"
+            summary_str += f"  Mean Accuracy: {mean_acc_val:.4f}\n"
             if N_SPLITS_CV > 1:
-                summary_str += f"  Standard Deviation: {std_acc_val:.4f}\n"
+                summary_str += f"  Standard Deviation of Accuracy: {std_acc_val:.4f}\n"
                 if t_critical > 0:
                     sem_acc_val = std_acc_val / np.sqrt(N_SPLITS_CV)
                     moe_acc_val = t_critical * sem_acc_val
                     ci_acc_val = (mean_acc_val - moe_acc_val, mean_acc_val + moe_acc_val)
-                    summary_str += f"  Standard Error of Mean (SEM): {sem_acc_val:.4f}\n"
-                    summary_str += f"  95% Confidence Interval: ({ci_acc_val[0]:.4f}, {ci_acc_val[1]:.4f})\n"
+                    summary_str += f"  Standard Error of Mean (SEM) for Accuracy: {sem_acc_val:.4f}\n"
+                    summary_str += f"  95% Confidence Interval for Mean Accuracy: ({ci_acc_val[0]:.4f}, {ci_acc_val[1]:.4f})\n"
                 else:
-                    summary_str += "  (SEM and CI not calculated as t_critical is not valid)\n"
+                    summary_str += "  (SEM and CI for Accuracy not calculated as t_critical is not valid)\n"
             else:
-                summary_str += "  (Std Dev, SEM, and CI not applicable for a single fold/split)\n"
+                summary_str += "  (Std Dev, SEM, and CI for Accuracy not applicable for a single fold/split)\n"
         else:
-            summary_str += "  Data not available (no fold accuracies).\n"
-        
-        metrics_to_summarize_config = {
-            "Precision (micro avg)": {"source_type": "accuracy", "note": "(Same as Accuracy)"},
-            "Recall (micro avg)":    {"source_type": "accuracy", "note": "(Same as Accuracy)"},
-            "F1-score (micro avg)":  {"source_type": "accuracy", "note": "(Same as Accuracy)"},
-            "Precision (macro avg)": {"source_type": "report_dict", "avg_key": "macro avg", "metric_key": "precision"},
-            "Recall (macro avg)":    {"source_type": "report_dict", "avg_key": "macro avg", "metric_key": "recall"},
-            "F1-score (macro avg)":  {"source_type": "report_dict", "avg_key": "macro avg", "metric_key": "f1-score"},
-            "Precision (weighted avg)": {"source_type": "report_dict", "avg_key": "weighted avg", "metric_key": "precision"},
-            "Recall (weighted avg)":    {"source_type": "report_dict", "avg_key": "weighted avg", "metric_key": "recall"},
-            "F1-score (weighted avg)":  {"source_type": "report_dict", "avg_key": "weighted avg", "metric_key": "f1-score"},
-        }
-
-        for display_name, config in metrics_to_summarize_config.items():
-            metric_values = []
-            note = config.get("note", "")
-
-            if config["source_type"] == "accuracy":
-                metric_values = fold_accuracies
-            elif config["source_type"] == "report_dict" and all_fold_report_dicts:
-                avg_key = config["avg_key"]
-                metric_key = config["metric_key"]
-                temp_values = []
-                possible_to_extract = True
-                for report_dict_fold in all_fold_report_dicts:
-                    if avg_key in report_dict_fold and metric_key in report_dict_fold[avg_key]:
-                        temp_values.append(report_dict_fold[avg_key][metric_key])
-                    else:
-                        print(f"Warning: Data for '{display_name}' (key: {avg_key}.{metric_key}) missing in a fold report.")
-                        possible_to_extract = False
-                        break
-                if possible_to_extract:
-                    metric_values = temp_values
-            
-            summary_str += f"\n{display_name} {note}:\n"
-            if metric_values: 
-                mean_val = np.mean(metric_values)
-                std_val = np.std(metric_values)
-                
-                summary_str += f"  Individual Fold Values: {[round(val, 4) for val in metric_values]}\n"
-                summary_str += f"  Mean: {mean_val:.4f}\n"
-                if N_SPLITS_CV > 1:
-                    summary_str += f"  Standard Deviation: {std_val:.4f}\n"
-                    if t_critical > 0: 
-                        sem_val = std_val / np.sqrt(N_SPLITS_CV)
-                        moe_val = t_critical * sem_val
-                        ci_val = (mean_val - moe_val, mean_val + moe_val)
-                        summary_str += f"  Standard Error of Mean (SEM): {sem_val:.4f}\n"
-                        summary_str += f"  95% Confidence Interval: ({ci_val[0]:.4f}, {ci_val[1]:.4f})\n"
-                    else:
-                        summary_str += "  (SEM and CI not calculated as t_critical is not valid)\n"
-                else:
-                     summary_str += "  (Std Dev, SEM, and CI not applicable for a single fold/split)\n"
-            else:
-                summary_str += "  Data not available.\n"
+            summary_str += "  Accuracy data not available (no fold accuracies).\n"
         
         summary_str += f"\nDetailed mean report with CIs for metrics saved to: {mean_report_str_path}\n"
         
@@ -315,23 +274,24 @@ def main_bow():
         # --- End of new/modified summary generation ---
 
     else: # Single train/test split
-        # ... (single split logic as before, ensure vectorizer is CountVectorizer) ...
         print("\nSplitting data into a single training and testing set...")
         start_time_split = time.time()
         X_train, X_test, y_train, y_test = train_test_split(
             texts_to_process, labels_to_process, test_size=0.2, random_state=42,
             stratify=labels_to_process if len(set(labels_to_process)) > 1 else None)
         print(f"Data split in {time.time() - start_time_split:.2f}s. Train: {len(X_train)}, Test: {len(X_test)}")
-        if not X_train: print("Error: Training set empty."); return
+        if not X_train or len(X_train) == 0 : print("Error: Training set empty after split."); return
 
         print(f"\n--- Processing with {feature_name} for single split on '{DATASET_CONFIG}' data ---")
         vectorizer = CountVectorizer(max_features=5000)
         X_train_transformed = vectorizer.fit_transform(X_train)
         X_test_transformed = vectorizer.transform(X_test)
         
-        # Consider saving the single run report to the specific single_run_output_dir
-        # For now, run_svm_classification prints to console.
-        run_svm_classification(X_train_transformed, X_test_transformed, y_train, y_test, feature_type=f"{feature_name} (Single Split - {DATASET_CONFIG})")
+        run_svm_classification(X_train_transformed, X_test_transformed, y_train, y_test, 
+                               feature_type=f"{feature_name} (Single Split - {DATASET_CONFIG})",
+                               labels=unique_labels_to_process, 
+                               target_names=unique_labels_to_process_str,
+                               output_dir=single_run_output_dir) # Pass output_dir
 
     print(f"\n{feature_name} SVM script finished for {DATASET_CONFIG} dataset.")
 
