@@ -1,0 +1,75 @@
+
+--- K-Fold Cross-Validation Summary (TF-IDF - volume) ---
+Number of Folds: 5
+
+Accuracy:
+  Individual Fold Values: [0.6532, 0.6559, 0.624, 0.6275, 0.6249]
+  Mean: 0.6371
+  Standard Deviation: 0.0143
+  Standard Error of Mean (SEM): 0.0064
+  95% Confidence Interval: (0.6193, 0.6549)
+
+Precision (micro avg) (Same as Accuracy):
+  Individual Fold Values: [0.6532, 0.6559, 0.624, 0.6275, 0.6249]
+  Mean: 0.6371
+  Standard Deviation: 0.0143
+  Standard Error of Mean (SEM): 0.0064
+  95% Confidence Interval: (0.6193, 0.6549)
+
+Recall (micro avg) (Same as Accuracy):
+  Individual Fold Values: [0.6532, 0.6559, 0.624, 0.6275, 0.6249]
+  Mean: 0.6371
+  Standard Deviation: 0.0143
+  Standard Error of Mean (SEM): 0.0064
+  95% Confidence Interval: (0.6193, 0.6549)
+
+F1-score (micro avg) (Same as Accuracy):
+  Individual Fold Values: [0.6532, 0.6559, 0.624, 0.6275, 0.6249]
+  Mean: 0.6371
+  Standard Deviation: 0.0143
+  Standard Error of Mean (SEM): 0.0064
+  95% Confidence Interval: (0.6193, 0.6549)
+
+Precision (macro avg) :
+  Individual Fold Values: [0.6882, 0.7207, 0.7235, 0.7254, 0.7233]
+  Mean: 0.7162
+  Standard Deviation: 0.0141
+  Standard Error of Mean (SEM): 0.0063
+  95% Confidence Interval: (0.6988, 0.7337)
+
+Recall (macro avg) :
+  Individual Fold Values: [0.5549, 0.5594, 0.5238, 0.5352, 0.5299]
+  Mean: 0.5407
+  Standard Deviation: 0.0140
+  Standard Error of Mean (SEM): 0.0063
+  95% Confidence Interval: (0.5232, 0.5581)
+
+F1-score (macro avg) :
+  Individual Fold Values: [0.5805, 0.5982, 0.5648, 0.5699, 0.5704]
+  Mean: 0.5767
+  Standard Deviation: 0.0119
+  Standard Error of Mean (SEM): 0.0053
+  95% Confidence Interval: (0.5620, 0.5915)
+
+Precision (weighted avg) :
+  Individual Fold Values: [0.6809, 0.6946, 0.684, 0.6796, 0.6776]
+  Mean: 0.6833
+  Standard Deviation: 0.0060
+  Standard Error of Mean (SEM): 0.0027
+  95% Confidence Interval: (0.6759, 0.6908)
+
+Recall (weighted avg) :
+  Individual Fold Values: [0.6532, 0.6559, 0.624, 0.6275, 0.6249]
+  Mean: 0.6371
+  Standard Deviation: 0.0143
+  Standard Error of Mean (SEM): 0.0064
+  95% Confidence Interval: (0.6193, 0.6549)
+
+F1-score (weighted avg) :
+  Individual Fold Values: [0.6378, 0.6441, 0.6177, 0.6201, 0.6149]
+  Mean: 0.6269
+  Standard Deviation: 0.0117
+  Standard Error of Mean (SEM): 0.0052
+  95% Confidence Interval: (0.6124, 0.6415)
+
+Detailed mean report with CIs for metrics saved to: c:\Users\USER\Desktop\PROJECTS\ML_GreekLegalDocs\merosB1\i\outputs\tfidf_volume_cv_reports\mean_classification_report.txt

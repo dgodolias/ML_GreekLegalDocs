@@ -17,7 +17,8 @@ from sklearn.metrics import accuracy_score, classification_report
 from utils import run_svm_classification
 
 # --- Configuration ---
-USE_SUBSET_FOR_CV_DATA = False
+DATASET_CONFIG = "volume"  # Options: "volume", "chapter", "subject"
+USE_SUBSET_FOR_CV_DATA = True
 SUBSET_PERCENTAGE = 0.2
 PERFORM_K_FOLD_CV = True
 N_SPLITS_CV = 5
@@ -70,23 +71,28 @@ def main_tfidf(): # Changed
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     output_base_dir = os.path.join(script_dir, "outputs")
-    cv_output_dir = os.path.join(output_base_dir, "tfidf_cv_reports") # Changed
+    # Adjust cv_output_dir to include dataset_config for better organization
+    cv_output_dir = os.path.join(output_base_dir, f"tfidf_{DATASET_CONFIG}_cv_reports") # Changed
     
     if PERFORM_K_FOLD_CV:
         os.makedirs(cv_output_dir, exist_ok=True)
         print(f"INFO: Reports will be saved in '{cv_output_dir}'")
     else:
-        os.makedirs(output_base_dir, exist_ok=True)
+        # Adjust single run output dir as well if desired
+        single_run_output_dir = os.path.join(output_base_dir, f"tfidf_{DATASET_CONFIG}_single_run_reports")
+        os.makedirs(single_run_output_dir, exist_ok=True)
+        print(f"INFO: Single run reports will be saved in '{single_run_output_dir}'")
+
 
     print(f"INFO: Script configured to use a {SUBSET_PERCENTAGE*100:.0f}% subset of the data for processing." if USE_SUBSET_FOR_CV_DATA else "INFO: Script configured to use all available data for processing.")
     print(f"INFO: K-Fold Cross-Validation is ENABLED with {N_SPLITS_CV} splits." if PERFORM_K_FOLD_CV else "INFO: K-Fold Cross-Validation is DISABLED. Using single train/test split.")
 
-    print("Loading dataset 'AI-team-UoA/greek_legal_code' with 'volume' configuration...")
+    print(f"Loading dataset 'AI-team-UoA/greek_legal_code' with '{DATASET_CONFIG}' configuration...")
     start_time = time.time()
     try:
-        ds = load_dataset("AI-team-UoA/greek_legal_code", "volume", trust_remote_code=True)
+        ds = load_dataset("AI-team-UoA/greek_legal_code", DATASET_CONFIG, trust_remote_code=True)
     except Exception as e:
-        print(f"Error loading dataset: {e}"); return
+        print(f"Error loading dataset with config '{DATASET_CONFIG}': {e}"); return
     print(f"Dataset loaded in {time.time() - start_time:.2f} seconds.")
 
     dataset_split = ds.get('train')
@@ -106,7 +112,7 @@ def main_tfidf(): # Changed
     if len(texts_full) == 0: print("No data to process."); return
         
     unique_labels_full = sorted(list(set(labels_full)))
-    print(f"Unique labels in full dataset: {len(unique_labels_full)}")
+    print(f"Unique labels in full dataset ({DATASET_CONFIG} config): {len(unique_labels_full)}")
 
     texts_to_process, labels_to_process = texts_full, labels_full
     if USE_SUBSET_FOR_CV_DATA:
@@ -127,7 +133,7 @@ def main_tfidf(): # Changed
         print(f"Error: Samples ({len(texts_to_process)}) < N_SPLITS_CV ({N_SPLITS_CV})."); return
 
     if PERFORM_K_FOLD_CV:
-        print(f"\n--- Performing {N_SPLITS_CV}-Fold Cross-Validation with {feature_name} ---")
+        print(f"\n--- Performing {N_SPLITS_CV}-Fold Cross-Validation with {feature_name} on '{DATASET_CONFIG}' data ---")
         skf = StratifiedKFold(n_splits=N_SPLITS_CV, shuffle=True, random_state=42)
         fold_accuracies = []
         all_fold_report_dicts = []
@@ -169,61 +175,130 @@ def main_tfidf(): # Changed
             all_fold_report_dicts.append(report_dict_fold)
 
             with open(os.path.join(cv_output_dir, f"fold_{fold_num}_report.txt"), "w", encoding='utf-8') as f:
-                f.write(f"Classification Report for Fold {fold_num} ({feature_name})\nAccuracy: {fold_accuracy:.4f}\n\n{report_str_fold}")
+                f.write(f"Classification Report for Fold {fold_num} ({feature_name} - {DATASET_CONFIG})\nAccuracy: {fold_accuracy:.4f}\n\n{report_str_fold}")
             print(f"Fold {fold_num} report saved. Processed in {time.time() - start_fold_time:.2f}s.")
 
         mean_report_metrics = {}
         report_keys_for_mean_calc = unique_labels_to_process_str + ['macro avg', 'weighted avg']
 
         for key in report_keys_for_mean_calc:
-            if key in all_fold_report_dicts[0]:
+            if all_fold_report_dicts and key in all_fold_report_dicts[0]: # Check if list is not empty
                 mean_report_metrics[key] = {}
                 for metric_name in ['precision', 'recall', 'f1-score']:
                     if metric_name in all_fold_report_dicts[0][key]:
                         metric_values = [fr[key][metric_name] for fr in all_fold_report_dicts if key in fr and metric_name in fr[key]]
+                        if not metric_values: continue
                         mean_val = np.mean(metric_values)
                         std_val = np.std(metric_values)
                         sem_val = 0; moe_val = 0
-                        if N_SPLITS_CV > 1:
+                        if N_SPLITS_CV > 1 and t_critical > 0: # Ensure t_critical is valid
                             sem_val = std_val / np.sqrt(N_SPLITS_CV)
                             moe_val = t_critical * sem_val
                         mean_report_metrics[key][metric_name] = {'mean': mean_val, 'moe': moe_val}
                 if 'support' in all_fold_report_dicts[0][key]:
                     support_values = [fr[key]['support'] for fr in all_fold_report_dicts if key in fr and 'support' in fr[key]]
-                    mean_report_metrics[key]['support'] = {'mean': np.mean(support_values)}
+                    if support_values:
+                        mean_report_metrics[key]['support'] = {'mean': np.mean(support_values)}
         
         mean_report_json_path = os.path.join(cv_output_dir, "mean_classification_report.json")
         with open(mean_report_json_path, "w", encoding='utf-8') as f: json.dump(mean_report_metrics, f, indent=4)
         print(f"Mean classification report (JSON) saved to {mean_report_json_path}")
 
-        formatted_mean_report_str = format_mean_report_to_string(mean_report_metrics, unique_labels_to_process_str, include_ci=True)
+        formatted_mean_report_str = format_mean_report_to_string(mean_report_metrics, unique_labels_to_process_str, include_ci=(t_critical > 0))
         mean_report_str_path = os.path.join(cv_output_dir, "mean_classification_report.txt")
         with open(mean_report_str_path, "w", encoding='utf-8') as f:
-            f.write(f"Mean Classification Report ({N_SPLITS_CV}-Folds, {feature_name})\n\n{formatted_mean_report_str}")
+            f.write(f"Mean Classification Report ({N_SPLITS_CV}-Folds, {feature_name} - {DATASET_CONFIG})\n\n{formatted_mean_report_str}")
         print(f"Mean classification report (TXT) saved to {mean_report_str_path}")
 
-        mean_accuracy = np.mean(fold_accuracies)
-        std_accuracy = np.std(fold_accuracies)
-        sem_accuracy = 0; confidence_interval = (0,0)
-        if N_SPLITS_CV > 1:
-            sem_accuracy = std_accuracy / np.sqrt(N_SPLITS_CV)
-            margin_of_error_acc = t_critical * sem_accuracy
-            confidence_interval = (mean_accuracy - margin_of_error_acc, mean_accuracy + margin_of_error_acc)
-
-        summary_str = f"\n--- K-Fold Cross-Validation Summary ({feature_name}) ---\n"
+        # --- Start of new/modified summary generation ---
+        summary_str = f"\n--- K-Fold Cross-Validation Summary ({feature_name} - {DATASET_CONFIG}) ---\n"
         summary_str += f"Number of Folds: {N_SPLITS_CV}\n"
-        # ... (rest of summary string generation as in BoW) ...
-        summary_str += f"Individual Fold Accuracies: {[round(acc, 4) for acc in fold_accuracies]}\n"
-        summary_str += f"Mean Accuracy: {mean_accuracy:.4f}\n"
-        summary_str += f"Standard Deviation of Accuracy: {std_accuracy:.4f}\n"
-        if N_SPLITS_CV > 1:
-            summary_str += f"Standard Error of the Mean (SEM) for Accuracy: {sem_accuracy:.4f}\n"
-            summary_str += f"95% Confidence Interval for Mean Accuracy: ({confidence_interval[0]:.4f}, {confidence_interval[1]:.4f})\n"
+
+        # Calculate and add stats for Accuracy
+        summary_str += f"\nAccuracy:\n"
+        if fold_accuracies:
+            mean_acc_val = np.mean(fold_accuracies)
+            std_acc_val = np.std(fold_accuracies)
+            summary_str += f"  Individual Fold Values: {[round(val, 4) for val in fold_accuracies]}\n"
+            summary_str += f"  Mean: {mean_acc_val:.4f}\n"
+            if N_SPLITS_CV > 1:
+                summary_str += f"  Standard Deviation: {std_acc_val:.4f}\n"
+                if t_critical > 0:
+                    sem_acc_val = std_acc_val / np.sqrt(N_SPLITS_CV)
+                    moe_acc_val = t_critical * sem_acc_val
+                    ci_acc_val = (mean_acc_val - moe_acc_val, mean_acc_val + moe_acc_val)
+                    summary_str += f"  Standard Error of Mean (SEM): {sem_acc_val:.4f}\n"
+                    summary_str += f"  95% Confidence Interval: ({ci_acc_val[0]:.4f}, {ci_acc_val[1]:.4f})\n"
+                else:
+                    summary_str += "  (SEM and CI not calculated as t_critical is not valid)\n"
+            else:
+                summary_str += "  (Std Dev, SEM, and CI not applicable for a single fold/split)\n"
+        else:
+            summary_str += "  Data not available (no fold accuracies).\n"
+        
+        metrics_to_summarize_config = {
+            "Precision (micro avg)": {"source_type": "accuracy", "note": "(Same as Accuracy)"},
+            "Recall (micro avg)":    {"source_type": "accuracy", "note": "(Same as Accuracy)"},
+            "F1-score (micro avg)":  {"source_type": "accuracy", "note": "(Same as Accuracy)"},
+            "Precision (macro avg)": {"source_type": "report_dict", "avg_key": "macro avg", "metric_key": "precision"},
+            "Recall (macro avg)":    {"source_type": "report_dict", "avg_key": "macro avg", "metric_key": "recall"},
+            "F1-score (macro avg)":  {"source_type": "report_dict", "avg_key": "macro avg", "metric_key": "f1-score"},
+            "Precision (weighted avg)": {"source_type": "report_dict", "avg_key": "weighted avg", "metric_key": "precision"},
+            "Recall (weighted avg)":    {"source_type": "report_dict", "avg_key": "weighted avg", "metric_key": "recall"},
+            "F1-score (weighted avg)":  {"source_type": "report_dict", "avg_key": "weighted avg", "metric_key": "f1-score"},
+        }
+
+        for display_name, config in metrics_to_summarize_config.items():
+            metric_values = []
+            note = config.get("note", "")
+
+            if config["source_type"] == "accuracy":
+                metric_values = fold_accuracies
+            elif config["source_type"] == "report_dict" and all_fold_report_dicts:
+                avg_key = config["avg_key"]
+                metric_key = config["metric_key"]
+                temp_values = []
+                possible_to_extract = True
+                for report_dict_fold in all_fold_report_dicts:
+                    if avg_key in report_dict_fold and metric_key in report_dict_fold[avg_key]:
+                        temp_values.append(report_dict_fold[avg_key][metric_key])
+                    else:
+                        print(f"Warning: Data for '{display_name}' (key: {avg_key}.{metric_key}) missing in a fold report.")
+                        possible_to_extract = False
+                        break
+                if possible_to_extract:
+                    metric_values = temp_values
+            
+            summary_str += f"\n{display_name} {note}:\n"
+            if metric_values: 
+                mean_val = np.mean(metric_values)
+                std_val = np.std(metric_values)
+                
+                summary_str += f"  Individual Fold Values: {[round(val, 4) for val in metric_values]}\n"
+                summary_str += f"  Mean: {mean_val:.4f}\n"
+                if N_SPLITS_CV > 1:
+                    summary_str += f"  Standard Deviation: {std_val:.4f}\n"
+                    if t_critical > 0: 
+                        sem_val = std_val / np.sqrt(N_SPLITS_CV)
+                        moe_val = t_critical * sem_val
+                        ci_val = (mean_val - moe_val, mean_val + moe_val)
+                        summary_str += f"  Standard Error of Mean (SEM): {sem_val:.4f}\n"
+                        summary_str += f"  95% Confidence Interval: ({ci_val[0]:.4f}, {ci_val[1]:.4f})\n"
+                    else:
+                        summary_str += "  (SEM and CI not calculated as t_critical is not valid)\n"
+                else:
+                     summary_str += "  (Std Dev, SEM, and CI not applicable for a single fold/split)\n"
+            else:
+                summary_str += "  Data not available.\n"
+        
         summary_str += f"\nDetailed mean report with CIs for metrics saved to: {mean_report_str_path}\n"
         
         print(summary_str)
-        with open(os.path.join(cv_output_dir, "cv_overall_summary.txt"), "w", encoding='utf-8') as f: f.write(summary_str)
+        with open(os.path.join(cv_output_dir, "cv_overall_summary.txt"), "w", encoding='utf-8') as f:
+            f.write(summary_str)
         print(f"Overall CV summary saved to {os.path.join(cv_output_dir, 'cv_overall_summary.txt')}")
+        # --- End of new/modified summary generation ---
+
 
     else: # Single train/test split
         print("\nSplitting data into a single training and testing set...")
@@ -234,14 +309,14 @@ def main_tfidf(): # Changed
         print(f"Data split in {time.time() - start_time_split:.2f}s. Train: {len(X_train)}, Test: {len(X_test)}")
         if not X_train: print("Error: Training set empty."); return
 
-        print(f"\n--- Processing with {feature_name} for single split ---")
+        print(f"\n--- Processing with {feature_name} for single split on '{DATASET_CONFIG}' data ---")
         vectorizer = TfidfVectorizer(max_features=5000) # Changed
         X_train_transformed = vectorizer.fit_transform(X_train)
         X_test_transformed = vectorizer.transform(X_test)
         
-        run_svm_classification(X_train_transformed, X_test_transformed, y_train, y_test, feature_type=f"{feature_name} (Single Split)")
+        run_svm_classification(X_train_transformed, X_test_transformed, y_train, y_test, feature_type=f"{feature_name} (Single Split - {DATASET_CONFIG})")
 
-    print(f"\n{feature_name} SVM script finished.")
+    print(f"\n{feature_name} SVM script finished for {DATASET_CONFIG} dataset.")
 
 if __name__ == "__main__":
     main_tfidf() # Changed

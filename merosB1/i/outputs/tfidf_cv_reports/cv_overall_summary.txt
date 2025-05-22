@@ -1,0 +1,10 @@
+
+--- K-Fold Cross-Validation Summary (TF-IDF) ---
+Number of Folds: 5
+Individual Fold Accuracies: [0.7651, 0.7601, 0.7561, 0.7547, 0.7515]
+Mean Accuracy: 0.7575
+Standard Deviation of Accuracy: 0.0047
+Standard Error of the Mean (SEM) for Accuracy: 0.0021
+95% Confidence Interval for Mean Accuracy: (0.7517, 0.7633)
+
+Detailed mean report with CIs for metrics saved to: c:\Users\USER\Desktop\PROJECTS\ML_GreekLegalDocs\merosB1\i\outputs\tfidf_cv_reports\mean_classification_report.txt
